@@ -11,233 +11,285 @@
       max-width: 460px;
       margin: auto;
       line-height: 1.5;
+      background: #ffffff;
+      color: #111;
     }
+
     h2 {
       margin-bottom: 20px;
+      font-size: 24px;
     }
+
     label {
       display: block;
       margin-top: 12px;
       margin-bottom: 4px;
       font-weight: bold;
     }
+
     input {
       width: 100%;
       margin-bottom: 8px;
       padding: 10px;
       font-size: 16px;
       box-sizing: border-box;
+      border: 1px solid #bbb;
+      border-radius: 6px;
     }
+
     .dms-row {
       display: flex;
       gap: 8px;
       align-items: end;
     }
+
     .dms-col {
       flex: 1;
     }
+
     .dms-col label {
       margin-top: 0;
       font-weight: normal;
       font-size: 14px;
       color: #555;
     }
+
     button {
       width: 100%;
       padding: 12px;
       font-size: 18px;
       margin-top: 18px;
       cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background: #222;
+      color: #fff;
     }
-    .result {
-      margin-top: 24px;
-      padding: 12px;
-      border: 1px solid #ccc;
-      background: #f8f8f8;
-      font-size: 17px;
-      font-weight: bold;
-      white-space: pre-line;
+
+    button:hover {
+      opacity: 0.92;
     }
+
     .note {
-      margin-top: 8px;
+      margin-top: 10px;
       color: #555;
       font-size: 13px;
+    }
+
+    .result {
+      margin-top: 24px;
+      padding: 14px;
+      border: 1px solid #ccc;
+      background: #f8f8f8;
+      border-radius: 8px;
+    }
+
+    .big-result {
+      font-size: 24px;
+      font-weight: bold;
+      line-height: 1.7;
+      margin-bottom: 14px;
+    }
+
+    .small-result {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.8;
+      border-top: 1px solid #ddd;
+      padding-top: 12px;
+    }
+
+    .error {
+      color: #b00020;
+      font-weight: bold;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
 
-<h2>TS座標計算（Z対応）</h2>
+  <h2>TS座標計算（Z対応）</h2>
 
-<label>器械点 X（北）</label>
-<input id="x0" type="number" step="any" />
+  <label>器械点 X（北）</label>
+  <input id="x0" type="number" step="any" />
 
-<label>器械点 Y（東）</label>
-<input id="y0" type="number" step="any" />
+  <label>器械点 Y（東）</label>
+  <input id="y0" type="number" step="any" />
 
-<label>器械点 Z</label>
-<input id="z0" type="number" step="any" />
+  <label>器械点 Z</label>
+  <input id="z0" type="number" step="any" />
 
-<label>後視点 X（北）</label>
-<input id="xb" type="number" step="any" />
+  <label>後視点 X（北）</label>
+  <input id="xb" type="number" step="any" />
 
-<label>後視点 Y（東）</label>
-<input id="yb" type="number" step="any" />
+  <label>後視点 Y（東）</label>
+  <input id="yb" type="number" step="any" />
 
-<label>挟角</label>
-<div class="dms-row">
-  <div class="dms-col">
-    <label for="angleDeg">度</label>
-    <input id="angleDeg" type="number" step="1" placeholder="度" />
+  <label>挟角</label>
+  <div class="dms-row">
+    <div class="dms-col">
+      <label for="angleDeg">度</label>
+      <input id="angleDeg" type="number" step="1" placeholder="度" />
+    </div>
+    <div class="dms-col">
+      <label for="angleMin">分</label>
+      <input id="angleMin" type="number" step="1" placeholder="分" />
+    </div>
+    <div class="dms-col">
+      <label for="angleSec">秒</label>
+      <input id="angleSec" type="number" step="any" placeholder="秒" />
+    </div>
   </div>
-  <div class="dms-col">
-    <label for="angleMin">分</label>
-    <input id="angleMin" type="number" step="1" placeholder="分" />
+
+  <label>鉛直角（上0°）</label>
+  <div class="dms-row">
+    <div class="dms-col">
+      <label for="zenDeg">度</label>
+      <input id="zenDeg" type="number" step="1" placeholder="度" />
+    </div>
+    <div class="dms-col">
+      <label for="zenMin">分</label>
+      <input id="zenMin" type="number" step="1" placeholder="分" />
+    </div>
+    <div class="dms-col">
+      <label for="zenSec">秒</label>
+      <input id="zenSec" type="number" step="any" placeholder="秒" />
+    </div>
   </div>
-  <div class="dms-col">
-    <label for="angleSec">秒</label>
-    <input id="angleSec" type="number" step="any" placeholder="秒" />
+
+  <label>斜距離（m）</label>
+  <input id="slopeDist" type="number" step="any" />
+
+  <label>器械高（m）</label>
+  <input id="hi" type="number" step="any" />
+
+  <label>プリズム高（m）</label>
+  <input id="hp" type="number" step="any" value="0" />
+
+  <button onclick="calc()">計算</button>
+
+  <div class="note">
+    ※ X＝北、Y＝東。挟角は後視方向を基準に右回り。<br>
+    ※ 鉛直角は「上が0°、水平が90°、下が180°」として計算。
   </div>
-</div>
 
-<label>鉛直角</label>
-<div class="dms-row">
-  <div class="dms-col">
-    <label for="zenDeg">度</label>
-    <input id="zenDeg" type="number" step="1" placeholder="度" />
-  </div>
-  <div class="dms-col">
-    <label for="zenMin">分</label>
-    <input id="zenMin" type="number" step="1" placeholder="分" />
-  </div>
-  <div class="dms-col">
-    <label for="zenSec">秒</label>
-    <input id="zenSec" type="number" step="any" placeholder="秒" />
-  </div>
-</div>
+  <div class="result" id="result">ここに結果が出る</div>
 
-<label>斜距離（m）</label>
-<input id="slopeDist" type="number" step="any" />
+  <script>
+    function degToRad(deg) {
+      return deg * Math.PI / 180;
+    }
 
-<label>器械高（m）</label>
-<input id="hi" type="number" step="any" />
+    function radToDeg(rad) {
+      return rad * 180 / Math.PI;
+    }
 
-<label>プリズム高（m）</label>
-<input id="hp" type="number" step="any" value="0" />
+    function normalizeDeg(deg) {
+      let result = deg % 360;
+      if (result < 0) result += 360;
+      return result;
+    }
 
-<button onclick="calc()">計算</button>
+    function dmsToDeg(deg, min, sec) {
+      return deg + min / 60 + sec / 3600;
+    }
 
-<div class="note">
-  ※ X＝北、Y＝東。挟角は後視方向を基準に右回り。<br>
-  ※ 鉛直角は「上が0°、水平が90°、下が180°」で計算。
-</div>
+    function calcAzimuthFromNorth(x1, y1, x2, y2) {
+      const dx = x2 - x1; // 北方向成分
+      const dy = y2 - y1; // 東方向成分
+      const rad = Math.atan2(dy, dx); // 北を0°、右回り
+      return normalizeDeg(radToDeg(rad));
+    }
 
-<div class="result" id="result">ここに結果が出る</div>
+    function showError(message) {
+      const result = document.getElementById("result");
+      result.innerHTML = "<div class='error'>" + message + "</div>";
+    }
 
-<script>
-function degToRad(deg) {
-  return deg * Math.PI / 180;
-}
+    function calc() {
+      const x0 = parseFloat(document.getElementById("x0").value);
+      const y0 = parseFloat(document.getElementById("y0").value);
+      const z0 = parseFloat(document.getElementById("z0").value);
+      const xb = parseFloat(document.getElementById("xb").value);
+      const yb = parseFloat(document.getElementById("yb").value);
 
-function radToDeg(rad) {
-  return rad * 180 / Math.PI;
-}
+      const angleDeg = parseFloat(document.getElementById("angleDeg").value) || 0;
+      const angleMin = parseFloat(document.getElementById("angleMin").value) || 0;
+      const angleSec = parseFloat(document.getElementById("angleSec").value) || 0;
 
-function normalizeDeg(deg) {
-  let result = deg % 360;
-  if (result < 0) result += 360;
-  return result;
-}
+      const zenDeg = parseFloat(document.getElementById("zenDeg").value) || 0;
+      const zenMin = parseFloat(document.getElementById("zenMin").value) || 0;
+      const zenSec = parseFloat(document.getElementById("zenSec").value) || 0;
 
-function dmsToDeg(deg, min, sec) {
-  return deg + min / 60 + sec / 3600;
-}
+      const slopeDist = parseFloat(document.getElementById("slopeDist").value);
+      const hi = parseFloat(document.getElementById("hi").value);
+      const hp = parseFloat(document.getElementById("hp").value);
 
-function calcAzimuthFromNorth(x1, y1, x2, y2) {
-  const dx = x2 - x1; // 北方向成分
-  const dy = y2 - y1; // 東方向成分
-  const rad = Math.atan2(dy, dx); // 北を0°、右回り
-  return normalizeDeg(radToDeg(rad));
-}
+      if (
+        isNaN(x0) || isNaN(y0) || isNaN(z0) ||
+        isNaN(xb) || isNaN(yb) ||
+        isNaN(slopeDist) || isNaN(hi) || isNaN(hp)
+      ) {
+        showError("未入力または数値でない項目があります。");
+        return;
+      }
 
-function calc() {
-  const x0 = parseFloat(document.getElementById("x0").value);
-  const y0 = parseFloat(document.getElementById("y0").value);
-  const z0 = parseFloat(document.getElementById("z0").value);
-  const xb = parseFloat(document.getElementById("xb").value);
-  const yb = parseFloat(document.getElementById("yb").value);
+      if (x0 === xb && y0 === yb) {
+        showError("器械点と後視点が同じ座標です。方位角を計算できません。");
+        return;
+      }
 
-  const angleDeg = parseFloat(document.getElementById("angleDeg").value) || 0;
-  const angleMin = parseFloat(document.getElementById("angleMin").value) || 0;
-  const angleSec = parseFloat(document.getElementById("angleSec").value) || 0;
+      if (
+        angleMin < 0 || angleMin >= 60 ||
+        angleSec < 0 || angleSec >= 60 ||
+        zenMin < 0 || zenMin >= 60 ||
+        zenSec < 0 || zenSec >= 60
+      ) {
+        showError("分・秒は 0以上60未満で入力してください。");
+        return;
+      }
 
-  const zenDeg = parseFloat(document.getElementById("zenDeg").value) || 0;
-  const zenMin = parseFloat(document.getElementById("zenMin").value) || 0;
-  const zenSec = parseFloat(document.getElementById("zenSec").value) || 0;
+      const angle = dmsToDeg(angleDeg, angleMin, angleSec);
+      const verticalAngle = dmsToDeg(zenDeg, zenMin, zenSec);
 
-  const slopeDist = parseFloat(document.getElementById("slopeDist").value);
-  const hi = parseFloat(document.getElementById("hi").value);
-  const hp = parseFloat(document.getElementById("hp").value);
-  const result = document.getElementById("result");
+      const backsightAz = calcAzimuthFromNorth(x0, y0, xb, yb);
+      const targetAz = normalizeDeg(backsightAz + angle);
 
-  if (
-    isNaN(x0) || isNaN(y0) || isNaN(z0) ||
-    isNaN(xb) || isNaN(yb) ||
-    isNaN(slopeDist) || isNaN(hi) || isNaN(hp)
-  ) {
-    result.innerText = "未入力または数値でない項目があります。";
-    return;
-  }
+      const targetAzRad = degToRad(targetAz);
+      const verticalAngleRad = degToRad(verticalAngle);
 
-  if (x0 === xb && y0 === yb) {
-    result.innerText = "器械点と後視点が同じ座標です。方位角を計算できません。";
-    return;
-  }
+      // 水平成分
+      const horizontalDist = slopeDist * Math.sin(verticalAngleRad);
 
-  if (
-    angleMin < 0 || angleMin >= 60 ||
-    angleSec < 0 || angleSec >= 60 ||
-    zenMin < 0 || zenMin >= 60 ||
-    zenSec < 0 || zenSec >= 60
-  ) {
-    result.innerText = "分・秒は 0以上60未満で入力してください。";
-    return;
-  }
+      // 平面座標計算（X=北, Y=東）
+      const x = x0 + horizontalDist * Math.cos(targetAzRad);
+      const y = y0 + horizontalDist * Math.sin(targetAzRad);
 
-  const angle = dmsToDeg(angleDeg, angleMin, angleSec);
-  const zenith = dmsToDeg(zenDeg, zenMin, zenSec);
+      // 鉛直成分（上が+）
+      const deltaZ = slopeDist * Math.cos(verticalAngleRad);
 
-  const backsightAz = calcAzimuthFromNorth(x0, y0, xb, yb);
-  const targetAz = normalizeDeg(backsightAz + angle);
+      // Z座標
+      const z = z0 + hi + deltaZ - hp;
 
-  const targetAzRad = degToRad(targetAz);
-  const zenithRad = degToRad(zenith);
-
-  // 水平成分
-  const horizontalDist = slopeDist * Math.sin(zenithRad);
-
-  // 平面座標計算（X=北, Y=東）
-  const x = x0 + horizontalDist * Math.cos(targetAzRad);
-  const y = y0 + horizontalDist * Math.sin(targetAzRad);
-
-  // 鉛直成分（上が+）
-  const deltaZ = slopeDist * Math.cos(zenithRad);
-
-  // Z座標計算
-  const z = z0 + hi + deltaZ - hp;
-
-  result.innerText =
-    "挟角: " + angle.toFixed(6) + "°\n" +
-    "鉛直角: " + zenith.toFixed(6) + "°\n" +
-    "後視方位角: " + backsightAz.toFixed(4) + "°\n" +
-    "観測方位角: " + targetAz.toFixed(4) + "°\n" +
-    "水平距離: " + horizontalDist.toFixed(3) + " m\n" +
-    "高低差: " + deltaZ.toFixed(3) + " m\n" +
-    "計算座標 X: " + x.toFixed(3) + "\n" +
-    "計算座標 Y: " + y.toFixed(3) + "\n" +
-    "計算座標 Z: " + z.toFixed(3);
-}
-</script>
-
+      const result = document.getElementById("result");
+      result.innerHTML =
+        "<div class='big-result'>" +
+          "計算座標 X: " + x.toFixed(3) + "<br>" +
+          "計算座標 Y: " + y.toFixed(3) + "<br>" +
+          "計算座標 Z: " + z.toFixed(3) +
+        "</div>" +
+        "<div class='small-result'>" +
+          "挟角: " + angle.toFixed(6) + "°<br>" +
+          "鉛直角: " + verticalAngle.toFixed(6) + "°<br>" +
+          "後視方位角: " + backsightAz.toFixed(4) + "°<br>" +
+          "観測方位角: " + targetAz.toFixed(4) + "°<br>" +
+          "斜距離: " + slopeDist.toFixed(3) + " m<br>" +
+          "水平距離: " + horizontalDist.toFixed(3) + " m<br>" +
+          "高低差: " + deltaZ.toFixed(3) + " m<br>" +
+          "器械高: " + hi.toFixed(3) + " m<br>" +
+          "プリズム高: " + hp.toFixed(3) + " m" +
+        "</div>";
+    }
+  </script>
 </body>
 </html>

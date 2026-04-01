@@ -330,9 +330,6 @@
 
     <h2>TS座標測設</h2>
 
-    <label>目標点名</label>
-    <input id="stakeoutPointName" type="text" placeholder="例: S1" />
-
     <label>器械点（リストから選択）</label>
     <select id="stakeoutInstSelect" onchange="applySelectedPoint('inst', 'stakeout')">
       <option value="">選択してください</option>
@@ -348,10 +345,6 @@
         <label for="stakeoutY0">Y（東）</label>
         <input id="stakeoutY0" type="number" step="any" />
       </div>
-    </div>
-    <div class="coord-z">
-      <label for="stakeoutZ0">Z</label>
-      <input id="stakeoutZ0" type="number" step="any" />
     </div>
 
     <label>後視点（リストから選択）</label>
@@ -387,22 +380,12 @@
         <input id="stakeoutYt" type="number" step="any" />
       </div>
     </div>
-    <div class="coord-z">
-      <label for="stakeoutZt">Z</label>
-      <input id="stakeoutZt" type="number" step="any" />
-    </div>
-
-    <label>器械高（m）</label>
-    <input id="stakeoutHi" type="number" step="any" />
-
-    <label>プリズム高（m）</label>
-    <input id="stakeoutHp" type="number" step="any" value="0" />
 
     <button onclick="calcStakeout()">計算</button>
 
     <div class="note">
       ※ X＝北、Y＝東。後視方向を0として、右回りの挟角を表示します。<br>
-      ※ 斜距離・水平距離・高低差・鉛直角（上0°）も計算します。
+      ※ 平面距離で計算します。
     </div>
 
     <div id="stakeoutResult" class="result">ここに結果が出る</div>
@@ -932,7 +915,8 @@
         if (targetSelect) targetSelect.innerHTML = '<option value="">選択してください</option>';
 
         records.forEach((record, index) => {
-          const label = `${record.pointName || "(無名)"} （X:${Number(record.x).toFixed(3)}, Y:${Number(record.y).toFixed(3)}, Z:${Number(record.z).toFixed(3)}）`;
+          const zText = Number.isFinite(Number(record.z)) ? Number(record.z).toFixed(3) : "0.000";
+          const label = `${record.pointName || "(無名)"} （X:${Number(record.x).toFixed(3)}, Y:${Number(record.y).toFixed(3)}, Z:${zText}）`;
 
           if (instSelect) {
             const opt1 = document.createElement("option");
@@ -983,15 +967,16 @@
       if (type === "inst") {
         document.getElementById(isRoute ? "routeX0" : (isStakeout ? "stakeoutX0" : "x0")).value = Number(record.x).toFixed(3);
         document.getElementById(isRoute ? "routeY0" : (isStakeout ? "stakeoutY0" : "y0")).value = Number(record.y).toFixed(3);
-        document.getElementById(isRoute ? "routeZ0" : (isStakeout ? "stakeoutZ0" : "z0")).value = Number(record.z).toFixed(3);
+
+        if (!isStakeout) {
+          document.getElementById(isRoute ? "routeZ0" : "z0").value = Number(record.z).toFixed(3);
+        }
       } else if (type === "bs") {
         document.getElementById(isRoute ? "routeXb" : (isStakeout ? "stakeoutXb" : "xb")).value = Number(record.x).toFixed(3);
         document.getElementById(isRoute ? "routeYb" : (isStakeout ? "stakeoutYb" : "yb")).value = Number(record.y).toFixed(3);
       } else if (type === "target") {
-        document.getElementById("stakeoutPointName").value = record.pointName || "";
         document.getElementById("stakeoutXt").value = Number(record.x).toFixed(3);
         document.getElementById("stakeoutYt").value = Number(record.y).toFixed(3);
-        document.getElementById("stakeoutZt").value = Number(record.z).toFixed(3);
       }
     }
 
@@ -1140,15 +1125,10 @@
     }
 
     function computeStakeoutFromCoordinate(input) {
-      if (!input.pointName) {
-        return { error: "目標点名を入力してください。" };
-      }
-
       if (
-        isNaN(input.x0) || isNaN(input.y0) || isNaN(input.z0) ||
+        isNaN(input.x0) || isNaN(input.y0) ||
         isNaN(input.xb) || isNaN(input.yb) ||
-        isNaN(input.xt) || isNaN(input.yt) || isNaN(input.zt) ||
-        isNaN(input.hi) || isNaN(input.hp)
+        isNaN(input.xt) || isNaN(input.yt)
       ) {
         return { error: "未入力または数値でない項目があります。" };
       }
@@ -1157,7 +1137,7 @@
         return { error: "器械点と後視点が同じ座標です。方位角を計算できません。" };
       }
 
-      if (input.x0 === input.xt && input.y0 === input.yt && input.z0 + input.hi === input.zt + input.hp) {
+      if (input.x0 === input.xt && input.y0 === input.yt) {
         return { error: "器械点と目標点が同一点です。" };
       }
 
@@ -1168,35 +1148,20 @@
       const dx = input.xt - input.x0;
       const dy = input.yt - input.y0;
       const horizontalDist = Math.hypot(dx, dy);
-      const deltaZ = (input.zt + input.hp) - (input.z0 + input.hi);
-      const slopeDist = Math.hypot(horizontalDist, deltaZ);
-
-      let verticalAngle;
-      if (slopeDist === 0) {
-        verticalAngle = 0;
-      } else {
-        verticalAngle = radToDeg(Math.acos(clamp(deltaZ / slopeDist, -1, 1)));
-      }
+      const slopeDist = horizontalDist;
 
       return {
-        pointName: input.pointName,
         x0: input.x0,
         y0: input.y0,
-        z0: input.z0,
         xb: input.xb,
         yb: input.yb,
         xt: input.xt,
         yt: input.yt,
-        zt: input.zt,
-        hi: input.hi,
-        hp: input.hp,
         backsightAz,
         targetAz,
         angle,
         horizontalDist,
-        deltaZ,
-        slopeDist,
-        verticalAngle
+        slopeDist
       };
     }
 
@@ -1253,17 +1218,12 @@
 
     function calcStakeout() {
       const input = {
-        pointName: document.getElementById("stakeoutPointName").value.trim(),
         x0: parseFloat(document.getElementById("stakeoutX0").value),
         y0: parseFloat(document.getElementById("stakeoutY0").value),
-        z0: parseFloat(document.getElementById("stakeoutZ0").value),
         xb: parseFloat(document.getElementById("stakeoutXb").value),
         yb: parseFloat(document.getElementById("stakeoutYb").value),
         xt: parseFloat(document.getElementById("stakeoutXt").value),
-        yt: parseFloat(document.getElementById("stakeoutYt").value),
-        zt: parseFloat(document.getElementById("stakeoutZt").value),
-        hi: parseFloat(document.getElementById("stakeoutHi").value),
-        hp: parseFloat(document.getElementById("stakeoutHp").value)
+        yt: parseFloat(document.getElementById("stakeoutYt").value)
       };
 
       const result = computeStakeoutFromCoordinate(input);
@@ -1275,20 +1235,15 @@
       document.getElementById("stakeoutResult").innerHTML =
         `<div class="big">
           挟角 ${formatDms(result.angle)}<br>
-          斜距離 ${result.slopeDist.toFixed(3)} m
+          距離 ${result.slopeDist.toFixed(3)} m
         </div>
         <div class="small">
-          目標点名: ${escapeHtml(result.pointName)}<br>
           後視方位角: ${result.backsightAz.toFixed(4)}°<br>
           目標方位角: ${result.targetAz.toFixed(4)}°<br>
           挟角（度表示）: ${result.angle.toFixed(6)}°<br>
-          鉛直角（上0°）: ${formatDms(result.verticalAngle)}<br>
-          鉛直角（度表示）: ${result.verticalAngle.toFixed(6)}°<br>
-          水平距離: ${result.horizontalDist.toFixed(3)} m<br>
-          高低差: ${result.deltaZ.toFixed(3)} m<br>
+          平面距離: ${result.horizontalDist.toFixed(3)} m<br>
           目標座標 X: ${result.xt.toFixed(3)}<br>
-          目標座標 Y: ${result.yt.toFixed(3)}<br>
-          目標座標 Z: ${result.zt.toFixed(3)}
+          目標座標 Y: ${result.yt.toFixed(3)}
         </div>`;
     }
 
@@ -1768,20 +1723,22 @@
         return;
       }
 
-      recordList.innerHTML = records.map((record, index) => `
+      recordList.innerHTML = records.map((record, index) => {
+        const zText = Number.isFinite(Number(record.z)) ? Number(record.z).toFixed(3) : "";
+        return `
         <div class="card">
           <div><strong>${index + 1}. ${escapeHtml(record.pointName || "")}</strong></div>
           <div>
             X: ${Number(record.x).toFixed(3)}<br>
-            Y: ${Number(record.y).toFixed(3)}<br>
-            Z: ${Number(record.z).toFixed(3)}
+            Y: ${Number(record.y).toFixed(3)}${zText !== "" ? `<br>Z: ${zText}` : ""}
             ${record.type === "route" ? `<br>路線名: ${escapeHtml(record.routeName || "")}<br>線形種別: ${escapeHtml(record.routeType === "straight" ? "直線" : "Rを含む線形")}<br>測点: ${escapeHtml(record.stationText || "")}<br>オフセット: ${escapeHtml(record.offsetText || "")}` : ""}
           </div>
           <div class="list-buttons">
             <button class="danger" onclick="deleteRecord(${index})">削除</button>
           </div>
         </div>
-      `).join("");
+      `;
+      }).join("");
     }
 
     function deleteRecord(index) {
@@ -1804,7 +1761,7 @@
 
       const x = prompt("Xを入力してください");
       const y = prompt("Yを入力してください");
-      const z = prompt("Zを入力してください");
+      const z = prompt("Zを入力してください（不要なら 0 でも可）");
 
       if (x === null || y === null || z === null) return;
 
@@ -1959,7 +1916,7 @@
         const offsetText = row[9] || "";
         const routeSection = row[10] || "";
 
-        if (!isFinite(x) || !isFinite(y) || !isFinite(z)) {
+        if (!isFinite(x) || !isFinite(y)) {
           continue;
         }
 
@@ -1971,7 +1928,7 @@
           pointName,
           x,
           y,
-          z,
+          z: isFinite(z) ? z : 0,
           createdAt,
           type,
           routeName,

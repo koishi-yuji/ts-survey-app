@@ -8,70 +8,140 @@
     body {
       font-family: sans-serif;
       padding: 20px;
-      max-width: 400px;
+      max-width: 420px;
       margin: auto;
+      line-height: 1.5;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 4px;
+      font-weight: bold;
     }
     input {
       width: 100%;
-      margin-bottom: 10px;
-      padding: 8px;
+      margin-bottom: 4px;
+      padding: 10px;
       font-size: 16px;
+      box-sizing: border-box;
     }
     button {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       font-size: 18px;
+      margin-top: 18px;
+      cursor: pointer;
     }
     .result {
-      margin-top: 20px;
-      font-size: 18px;
+      margin-top: 24px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      background: #f8f8f8;
+      font-size: 17px;
       font-weight: bold;
+      white-space: pre-line;
+    }
+    .note {
+      margin-top: 8px;
+      color: #555;
+      font-size: 13px;
     }
   </style>
 </head>
 <body>
 
-<h2>TS座標計算（試作）</h2>
+<h2>TS座標計算（後視点対応）</h2>
 
 <label>器械点 X</label>
-<input id="x0" type="number" />
+<input id="x0" type="number" step="any" />
 
 <label>器械点 Y</label>
-<input id="y0" type="number" />
+<input id="y0" type="number" step="any" />
 
-<label>基準方位角（度）</label>
-<input id="az0" type="number" />
+<label>後視点 X</label>
+<input id="xb" type="number" step="any" />
+
+<label>後視点 Y</label>
+<input id="yb" type="number" step="any" />
 
 <label>水平角（度）</label>
-<input id="hz" type="number" />
+<input id="hz" type="number" step="any" />
 
 <label>距離（m）</label>
-<input id="dist" type="number" />
+<input id="dist" type="number" step="any" />
 
 <button onclick="calc()">計算</button>
 
-<div class="result" id="result"></div>
+<div class="note">
+  ※ 水平角は「後視方向を基準に右回りで読んだ角」として計算
+</div>
+
+<div class="result" id="result">ここに結果が出る</div>
 
 <script>
 function degToRad(deg) {
   return deg * Math.PI / 180;
 }
 
+function radToDeg(rad) {
+  return rad * 180 / Math.PI;
+}
+
+function normalizeDeg(deg) {
+  let result = deg % 360;
+  if (result < 0) result += 360;
+  return result;
+}
+
+function calcAzimuthFromNorth(x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+
+  // 北を0°、東回りではなく、
+  // この式で X=東西, Y=南北 として
+  // 北=0°, 東=90°, 南=180°, 西=270°
+  const rad = Math.atan2(dx, dy);
+  return normalizeDeg(radToDeg(rad));
+}
+
 function calc() {
   const x0 = parseFloat(document.getElementById("x0").value);
   const y0 = parseFloat(document.getElementById("y0").value);
-  const az0 = parseFloat(document.getElementById("az0").value);
+  const xb = parseFloat(document.getElementById("xb").value);
+  const yb = parseFloat(document.getElementById("yb").value);
   const hz = parseFloat(document.getElementById("hz").value);
   const dist = parseFloat(document.getElementById("dist").value);
+  const result = document.getElementById("result");
 
-  const az = az0 + hz;
-  const rad = degToRad(az);
+  if (
+    isNaN(x0) || isNaN(y0) ||
+    isNaN(xb) || isNaN(yb) ||
+    isNaN(hz) || isNaN(dist)
+  ) {
+    result.innerText = "未入力または数値でない項目がある。見直せ。";
+    return;
+  }
+
+  if (x0 === xb && y0 === yb) {
+    result.innerText = "器械点と後視点が同じ座標だ。これでは方位が決まらん。";
+    return;
+  }
+
+  const backsightAz = calcAzimuthFromNorth(x0, y0, xb, yb);
+  const targetAz = normalizeDeg(backsightAz + hz);
+  const rad = degToRad(targetAz);
 
   const x = x0 + dist * Math.sin(rad);
   const y = y0 + dist * Math.cos(rad);
 
-  document.getElementById("result").innerText =
-    "X: " + x.toFixed(3) + " , Y: " + y.toFixed(3);
+  result.innerText =
+    "後視方位角: " + backsightAz.toFixed(4) + "°\n" +
+    "観測方位角: " + targetAz.toFixed(4) + "°\n" +
+    "計算座標 X: " + x.toFixed(3) + "\n" +
+    "計算座標 Y: " + y.toFixed(3);
 }
 </script>
 

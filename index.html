@@ -8,7 +8,7 @@
     body {
       font-family: sans-serif;
       padding: 20px;
-      max-width: 420px;
+      max-width: 460px;
       margin: auto;
       line-height: 1.5;
     }
@@ -67,13 +67,16 @@
 </head>
 <body>
 
-<h2>TS座標計算（後視点・DMS対応）</h2>
+<h2>TS座標計算（Z対応）</h2>
 
 <label>器械点 X（北）</label>
 <input id="x0" type="number" step="any" />
 
 <label>器械点 Y（東）</label>
 <input id="y0" type="number" step="any" />
+
+<label>器械点 Z</label>
+<input id="z0" type="number" step="any" />
 
 <label>後視点 X（北）</label>
 <input id="xb" type="number" step="any" />
@@ -97,13 +100,36 @@
   </div>
 </div>
 
-<label>距離（m）</label>
-<input id="dist" type="number" step="any" />
+<label>天頂角</label>
+<div class="dms-row">
+  <div class="dms-col">
+    <label for="zenDeg">度</label>
+    <input id="zenDeg" type="number" step="1" placeholder="度" />
+  </div>
+  <div class="dms-col">
+    <label for="zenMin">分</label>
+    <input id="zenMin" type="number" step="1" placeholder="分" />
+  </div>
+  <div class="dms-col">
+    <label for="zenSec">秒</label>
+    <input id="zenSec" type="number" step="any" placeholder="秒" />
+  </div>
+</div>
+
+<label>斜距離（m）</label>
+<input id="slopeDist" type="number" step="any" />
+
+<label>器械高（m）</label>
+<input id="hi" type="number" step="any" />
+
+<label>プリズム高（m）</label>
+<input id="hp" type="number" step="any" value="0" />
 
 <button onclick="calc()">計算</button>
 
 <div class="note">
-  ※ X＝北、Y＝東。挟角は後視方向を基準に右回りで読んだ角として計算。
+  ※ X＝北、Y＝東。挟角は後視方向を基準に右回り。<br>
+  ※ 天頂角は「上が0°、水平が90°、下が180°」で計算。
 </div>
 
 <div class="result" id="result">ここに結果が出る</div>
@@ -137,6 +163,7 @@ function calcAzimuthFromNorth(x1, y1, x2, y2) {
 function calc() {
   const x0 = parseFloat(document.getElementById("x0").value);
   const y0 = parseFloat(document.getElementById("y0").value);
+  const z0 = parseFloat(document.getElementById("z0").value);
   const xb = parseFloat(document.getElementById("xb").value);
   const yb = parseFloat(document.getElementById("yb").value);
 
@@ -144,13 +171,19 @@ function calc() {
   const angleMin = parseFloat(document.getElementById("angleMin").value) || 0;
   const angleSec = parseFloat(document.getElementById("angleSec").value) || 0;
 
-  const dist = parseFloat(document.getElementById("dist").value);
+  const zenDeg = parseFloat(document.getElementById("zenDeg").value) || 0;
+  const zenMin = parseFloat(document.getElementById("zenMin").value) || 0;
+  const zenSec = parseFloat(document.getElementById("zenSec").value) || 0;
+
+  const slopeDist = parseFloat(document.getElementById("slopeDist").value);
+  const hi = parseFloat(document.getElementById("hi").value);
+  const hp = parseFloat(document.getElementById("hp").value);
   const result = document.getElementById("result");
 
   if (
-    isNaN(x0) || isNaN(y0) ||
+    isNaN(x0) || isNaN(y0) || isNaN(z0) ||
     isNaN(xb) || isNaN(yb) ||
-    isNaN(dist)
+    isNaN(slopeDist) || isNaN(hi) || isNaN(hp)
   ) {
     result.innerText = "未入力または数値でない項目があります。";
     return;
@@ -161,27 +194,48 @@ function calc() {
     return;
   }
 
-  if (angleMin < 0 || angleMin >= 60 || angleSec < 0 || angleSec >= 60) {
+  if (
+    angleMin < 0 || angleMin >= 60 ||
+    angleSec < 0 || angleSec >= 60 ||
+    zenMin < 0 || zenMin >= 60 ||
+    zenSec < 0 || zenSec >= 60
+  ) {
     result.innerText = "分・秒は 0以上60未満で入力してください。";
     return;
   }
 
   const angle = dmsToDeg(angleDeg, angleMin, angleSec);
+  const zenith = dmsToDeg(zenDeg, zenMin, zenSec);
 
   const backsightAz = calcAzimuthFromNorth(x0, y0, xb, yb);
   const targetAz = normalizeDeg(backsightAz + angle);
-  const rad = degToRad(targetAz);
 
-  // X=北, Y=東
-  const x = x0 + dist * Math.cos(rad);
-  const y = y0 + dist * Math.sin(rad);
+  const targetAzRad = degToRad(targetAz);
+  const zenithRad = degToRad(zenith);
+
+  // 水平成分
+  const horizontalDist = slopeDist * Math.sin(zenithRad);
+
+  // 平面座標計算（X=北, Y=東）
+  const x = x0 + horizontalDist * Math.cos(targetAzRad);
+  const y = y0 + horizontalDist * Math.sin(targetAzRad);
+
+  // 鉛直成分（上が+）
+  const deltaZ = slopeDist * Math.cos(zenithRad);
+
+  // Z座標計算
+  const z = z0 + hi + deltaZ - hp;
 
   result.innerText =
     "挟角: " + angle.toFixed(6) + "°\n" +
+    "天頂角: " + zenith.toFixed(6) + "°\n" +
     "後視方位角: " + backsightAz.toFixed(4) + "°\n" +
     "観測方位角: " + targetAz.toFixed(4) + "°\n" +
+    "水平距離: " + horizontalDist.toFixed(3) + " m\n" +
+    "高低差: " + deltaZ.toFixed(3) + " m\n" +
     "計算座標 X: " + x.toFixed(3) + "\n" +
-    "計算座標 Y: " + y.toFixed(3);
+    "計算座標 Y: " + y.toFixed(3) + "\n" +
+    "計算座標 Z: " + z.toFixed(3);
 }
 </script>
 

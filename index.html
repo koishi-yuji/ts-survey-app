@@ -198,6 +198,10 @@
       margin-bottom: 10px;
       border-top: 1px solid #ddd;
     }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -213,7 +217,7 @@
     <div class="note">
       ※ スマホ内に保存します。<br>
       ※ CSVインポートは追加です。既存データは消えません。<br>
-      ※ 路線測量は単曲線（BP・IP・EP・R）対応です。
+      ※ 路線測量は「直線」「単曲線（BP・IP・EP・R）」に対応です。
     </div>
   </section>
 
@@ -327,6 +331,12 @@
 
     <h2>路線測量</h2>
 
+    <label>線形種別</label>
+    <select id="routeType" onchange="onRouteTypeChange()">
+      <option value="curve">Rを含む線形</option>
+      <option value="straight">直線</option>
+    </select>
+
     <label>路線名</label>
     <input id="routeName" type="text" placeholder="例: R1" />
 
@@ -342,15 +352,17 @@
       </div>
     </div>
 
-    <h3>IP座標</h3>
-    <div class="coord-row">
-      <div class="coord-col">
-        <label for="ipX">X（北）</label>
-        <input id="ipX" type="number" step="any" />
-      </div>
-      <div class="coord-col">
-        <label for="ipY">Y（東）</label>
-        <input id="ipY" type="number" step="any" />
+    <div id="ipSection">
+      <h3>IP座標</h3>
+      <div class="coord-row">
+        <div class="coord-col">
+          <label for="ipX">X（北）</label>
+          <input id="ipX" type="number" step="any" />
+        </div>
+        <div class="coord-col">
+          <label for="ipY">Y（東）</label>
+          <input id="ipY" type="number" step="any" />
+        </div>
       </div>
     </div>
 
@@ -378,15 +390,17 @@
       </div>
     </div>
 
-    <label>半径 R（m）</label>
-    <input id="routeRadius" type="number" step="any" />
+    <div id="radiusSection">
+      <label>半径 R（m）</label>
+      <input id="routeRadius" type="number" step="any" />
+    </div>
 
     <label>測点ピッチ（m）</label>
     <input id="routePitch" type="number" step="any" value="20" />
 
     <button onclick="prepareRouteMeasurement()">次へ</button>
 
-    <div class="note">
+    <div class="note" id="routeSetupNote">
       ※ BP測点は No. と +m で入力します。<br>
       ※ 例：No.12+3.456 の場合、No.=12、+m=3.456。<br>
       ※ 単曲線として計算します。
@@ -552,8 +566,8 @@
   </section>
 
   <script>
-    const STORAGE_KEY = "ts_coordinate_records_v4";
-    const ROUTE_STORAGE_KEY = "ts_current_route_v1";
+    const STORAGE_KEY = "ts_coordinate_records_v5";
+    const ROUTE_STORAGE_KEY = "ts_current_route_v2";
 
     let currentCalculatedRecord = null;
     let currentRouteCalculatedRecord = null;
@@ -573,6 +587,7 @@
     function openRouteSetupScreen() {
       document.getElementById("routeSetupMessage").textContent = "";
       hideRouteSetupError();
+      onRouteTypeChange();
       showScreen("routeSetupScreen");
     }
 
@@ -859,6 +874,29 @@
       box.innerHTML = "";
     }
 
+    function onRouteTypeChange() {
+      const routeType = document.getElementById("routeType").value;
+      const ipSection = document.getElementById("ipSection");
+      const radiusSection = document.getElementById("radiusSection");
+      const note = document.getElementById("routeSetupNote");
+
+      if (routeType === "straight") {
+        ipSection.classList.add("hidden");
+        radiusSection.classList.add("hidden");
+        note.innerHTML =
+          `※ BP測点は No. と +m で入力します。<br>
+           ※ 例：No.12+3.456 の場合、No.=12、+m=3.456。<br>
+           ※ 直線は BP と EP を結ぶ中心線として計算します。`;
+      } else {
+        ipSection.classList.remove("hidden");
+        radiusSection.classList.remove("hidden");
+        note.innerHTML =
+          `※ BP測点は No. と +m で入力します。<br>
+           ※ 例：No.12+3.456 の場合、No.=12、+m=3.456。<br>
+           ※ 単曲線として計算します。`;
+      }
+    }
+
     function getTsObservationFromIds(ids) {
       const pointName = document.getElementById(ids.pointName).value.trim();
       const x0 = parseFloat(document.getElementById(ids.x0).value);
@@ -1035,7 +1073,39 @@
       pointNameInput.value = prefix + nextNumber;
     }
 
-    function buildRouteData(routeInput) {
+    function buildStraightRouteData(routeInput) {
+      const bp = makePoint(routeInput.bpX, routeInput.bpY);
+      const ep = makePoint(routeInput.epX, routeInput.epY);
+
+      if (distance(bp, ep) === 0) {
+        throw new Error("BP と EP が同じ座標です。");
+      }
+
+      if (!(routeInput.pitch > 0)) {
+        throw new Error("測点ピッチは 0 より大きい値で入力してください。");
+      }
+
+      const directionUnit = normalizeVec(subVec(ep, bp));
+      const bpStation = stationToMeters(routeInput.bpStaNo, routeInput.bpStaPlus, routeInput.pitch);
+      const epStation = bpStation + distance(bp, ep);
+
+      return {
+        routeName: routeInput.routeName,
+        routeType: "straight",
+        bp,
+        ep,
+        pitch: routeInput.pitch,
+        bpStaNo: routeInput.bpStaNo,
+        bpStaPlus: routeInput.bpStaPlus,
+        bpStation,
+        epStation,
+        directionUnit,
+        totalLength: distance(bp, ep),
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    function buildCurveRouteData(routeInput) {
       const bp = makePoint(routeInput.bpX, routeInput.bpY);
       const ip = makePoint(routeInput.ipX, routeInput.ipY);
       const ep = makePoint(routeInput.epX, routeInput.epY);
@@ -1096,6 +1166,7 @@
 
       return {
         routeName: routeInput.routeName,
+        routeType: "curve",
         bp,
         ip,
         ep,
@@ -1125,16 +1196,14 @@
       hideRouteSetupError();
       document.getElementById("routeSetupMessage").textContent = "";
 
+      const routeType = document.getElementById("routeType").value;
       const routeName = document.getElementById("routeName").value.trim();
       const bpX = parseFloat(document.getElementById("bpX").value);
       const bpY = parseFloat(document.getElementById("bpY").value);
-      const ipX = parseFloat(document.getElementById("ipX").value);
-      const ipY = parseFloat(document.getElementById("ipY").value);
       const epX = parseFloat(document.getElementById("epX").value);
       const epY = parseFloat(document.getElementById("epY").value);
       const bpStaNo = parseFloat(document.getElementById("bpStaNo").value);
       const bpStaPlus = parseFloat(document.getElementById("bpStaPlus").value);
-      const radius = parseFloat(document.getElementById("routeRadius").value);
       const pitch = parseFloat(document.getElementById("routePitch").value);
 
       if (!routeName) {
@@ -1144,10 +1213,9 @@
 
       if (
         isNaN(bpX) || isNaN(bpY) ||
-        isNaN(ipX) || isNaN(ipY) ||
         isNaN(epX) || isNaN(epY) ||
         isNaN(bpStaNo) || isNaN(bpStaPlus) ||
-        isNaN(radius) || isNaN(pitch)
+        isNaN(pitch)
       ) {
         showRouteSetupError("未入力または数値でない項目があります。");
         return;
@@ -1164,16 +1232,38 @@
       }
 
       try {
-        const route = buildRouteData({
-          routeName,
-          bpX, bpY,
-          ipX, ipY,
-          epX, epY,
-          bpStaNo,
-          bpStaPlus,
-          radius,
-          pitch
-        });
+        let route;
+
+        if (routeType === "straight") {
+          route = buildStraightRouteData({
+            routeName,
+            bpX, bpY,
+            epX, epY,
+            bpStaNo,
+            bpStaPlus,
+            pitch
+          });
+        } else {
+          const ipX = parseFloat(document.getElementById("ipX").value);
+          const ipY = parseFloat(document.getElementById("ipY").value);
+          const radius = parseFloat(document.getElementById("routeRadius").value);
+
+          if (isNaN(ipX) || isNaN(ipY) || isNaN(radius)) {
+            showRouteSetupError("Rを含む線形では、IP座標と半径 R を入力してください。");
+            return;
+          }
+
+          route = buildCurveRouteData({
+            routeName,
+            bpX, bpY,
+            ipX, ipY,
+            epX, epY,
+            bpStaNo,
+            bpStaPlus,
+            radius,
+            pitch
+          });
+        }
 
         saveCurrentRoute(route);
         updateRouteSummary(route);
@@ -1192,20 +1282,45 @@
         return;
       }
 
-      summary.innerHTML =
-        `路線名: ${escapeHtml(route.routeName)}<br>
-        BP測点: ${formatStation(route.bpStation, route.pitch)}<br>
-        R: ${route.radius.toFixed(3)} m<br>
-        交角 Δ: ${route.deltaDeg.toFixed(6)}°<br>
-        曲線向き: ${route.turn === "left" ? "左カーブ" : "右カーブ"}<br>
-        接線長 T: ${route.tangentLength.toFixed(3)} m<br>
-        曲線長 L: ${route.curveLength.toFixed(3)} m<br>
-        BC測点: ${formatStation(route.bcStation, route.pitch)}<br>
-        EC測点: ${formatStation(route.ecStation, route.pitch)}<br>
-        EP測点: ${formatStation(route.epStation, route.pitch)}`;
+      if (route.routeType === "straight") {
+        summary.innerHTML =
+          `路線名: ${escapeHtml(route.routeName)}<br>
+          線形種別: 直線<br>
+          BP測点: ${formatStation(route.bpStation, route.pitch)}<br>
+          EP測点: ${formatStation(route.epStation, route.pitch)}<br>
+          延長: ${route.totalLength.toFixed(3)} m`;
+      } else {
+        summary.innerHTML =
+          `路線名: ${escapeHtml(route.routeName)}<br>
+          線形種別: Rを含む線形<br>
+          BP測点: ${formatStation(route.bpStation, route.pitch)}<br>
+          R: ${route.radius.toFixed(3)} m<br>
+          交角 Δ: ${route.deltaDeg.toFixed(6)}°<br>
+          曲線向き: ${route.turn === "left" ? "左カーブ" : "右カーブ"}<br>
+          接線長 T: ${route.tangentLength.toFixed(3)} m<br>
+          曲線長 L: ${route.curveLength.toFixed(3)} m<br>
+          BC測点: ${formatStation(route.bcStation, route.pitch)}<br>
+          EC測点: ${formatStation(route.ecStation, route.pitch)}<br>
+          EP測点: ${formatStation(route.epStation, route.pitch)}`;
+      }
     }
 
-    function projectPointToRoute(route, point) {
+    function projectPointToStraightRoute(route, point) {
+      const projection = projectPointToSegment(point, route.bp, route.ep);
+      const q = projection.projected;
+      const signedOffset = getSignedOffset(route.directionUnit, subVec(point, q));
+      const station = route.bpStation + distance(route.bp, q);
+
+      return {
+        section: "BP-EP",
+        station,
+        signedOffset,
+        absDistance: Math.abs(signedOffset),
+        projected: q
+      };
+    }
+
+    function projectPointToCurveRoute(route, point) {
       const candidates = [];
 
       // BP-BC
@@ -1332,18 +1447,21 @@
       }
 
       try {
-        const routePosition = projectPointToRoute(route, makePoint(tsResult.x, tsResult.y));
+        const routePosition = route.routeType === "straight"
+          ? projectPointToStraightRoute(route, makePoint(tsResult.x, tsResult.y))
+          : projectPointToCurveRoute(route, makePoint(tsResult.x, tsResult.y));
 
         currentRouteCalculatedRecord = {
           ...tsResult,
           routeName: route.routeName,
+          routeType: route.routeType,
           station: routePosition.station,
           stationText: formatStation(routePosition.station, route.pitch),
           signedOffset: routePosition.signedOffset,
           offsetText: offsetTextFromSigned(routePosition.signedOffset),
           routeSection: routePosition.section,
           routePitch: route.pitch,
-          routeRadius: route.radius,
+          routeRadius: route.routeType === "curve" ? route.radius : "",
           createdAt: new Date().toISOString(),
           type: "route"
         };
@@ -1360,6 +1478,7 @@
           </div>
           <div class="small">
             路線名: ${escapeHtml(route.routeName)}<br>
+            線形種別: ${route.routeType === "straight" ? "直線" : "Rを含む線形"}<br>
             区間: ${escapeHtml(currentRouteCalculatedRecord.routeSection)}<br>
             点名: ${escapeHtml(tsResult.pointName)}<br>
             挟角: ${tsResult.angle.toFixed(6)}°<br>
@@ -1410,7 +1529,7 @@
             X: ${Number(record.x).toFixed(3)}<br>
             Y: ${Number(record.y).toFixed(3)}<br>
             Z: ${Number(record.z).toFixed(3)}
-            ${record.type === "route" ? `<br>路線名: ${escapeHtml(record.routeName || "")}<br>測点: ${escapeHtml(record.stationText || "")}<br>オフセット: ${escapeHtml(record.offsetText || "")}` : ""}
+            ${record.type === "route" ? `<br>路線名: ${escapeHtml(record.routeName || "")}<br>線形種別: ${escapeHtml(record.routeType === "straight" ? "直線" : "Rを含む線形")}<br>測点: ${escapeHtml(record.stationText || "")}<br>オフセット: ${escapeHtml(record.offsetText || "")}` : ""}
           </div>
           <div class="list-buttons">
             <button class="danger" onclick="deleteRecord(${index})">削除</button>
@@ -1485,7 +1604,7 @@
 
       const headers = [
         "点名", "X", "Y", "Z", "登録日時", "種別",
-        "路線名", "測点", "オフセット", "区間"
+        "路線名", "線形種別", "測点", "オフセット", "区間"
       ];
 
       const rows = records.map(record => [
@@ -1496,6 +1615,7 @@
         record.createdAt || "",
         record.type || "",
         record.routeName || "",
+        record.routeType === "straight" ? "直線" : (record.routeType === "curve" ? "Rを含む線形" : ""),
         record.stationText || "",
         record.offsetText || "",
         record.routeSection || ""
@@ -1588,13 +1708,18 @@
         const createdAt = row[4] || new Date().toISOString();
         const type = row[5] || "import";
         const routeName = row[6] || "";
-        const stationText = row[7] || "";
-        const offsetText = row[8] || "";
-        const routeSection = row[9] || "";
+        const routeTypeText = row[7] || "";
+        const stationText = row[8] || "";
+        const offsetText = row[9] || "";
+        const routeSection = row[10] || "";
 
         if (!isFinite(x) || !isFinite(y) || !isFinite(z)) {
           continue;
         }
+
+        let routeType = "";
+        if (routeTypeText === "直線") routeType = "straight";
+        if (routeTypeText === "Rを含む線形") routeType = "curve";
 
         records.push({
           pointName,
@@ -1604,6 +1729,7 @@
           createdAt,
           type,
           routeName,
+          routeType,
           stationText,
           offsetText,
           routeSection
@@ -1659,8 +1785,12 @@
 
     // 初期化
     loadPointSelectors();
+    onRouteTypeChange();
+
     const loadedRoute = loadCurrentRoute();
     if (loadedRoute) {
+      document.getElementById("routeType").value = loadedRoute.routeType || "curve";
+      onRouteTypeChange();
       updateRouteSummary(loadedRoute);
     }
   </script>

@@ -104,7 +104,7 @@
       border: 1px solid #ddd;
       border-radius: 8px;
       padding: 10px;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       background: #fafafa;
     }
 
@@ -157,6 +157,16 @@
     .hidden-file-input {
       display: none;
     }
+
+    .list-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .list-buttons button {
+      margin-top: 0;
+    }
   </style>
 </head>
 <body>
@@ -164,7 +174,7 @@
   <!-- ホーム画面 -->
   <section id="homeScreen" class="screen active">
     <h1>TSツール</h1>
-    <button class="menu-button" onclick="showScreen('calcScreen'); loadPointSelectors();">TS計算座標</button>
+    <button class="menu-button" onclick="openCalcScreen()">TS計算座標</button>
     <button class="menu-button" onclick="showListScreen()">リスト表示</button>
     <button class="menu-button" onclick="showScreen('exportScreen')">リストエクスポート</button>
     <button class="menu-button" onclick="showScreen('importScreen')">リストインポート</button>
@@ -312,13 +322,18 @@
   </section>
 
   <script>
-    const STORAGE_KEY = "ts_coordinate_records_v2";
+    const STORAGE_KEY = "ts_coordinate_records_v3";
     let currentCalculatedRecord = null;
 
     function showScreen(screenId) {
       const screens = document.querySelectorAll(".screen");
       screens.forEach(screen => screen.classList.remove("active"));
       document.getElementById(screenId).classList.add("active");
+    }
+
+    function openCalcScreen() {
+      loadPointSelectors();
+      showScreen("calcScreen");
     }
 
     function showListScreen() {
@@ -575,8 +590,25 @@
             Y: ${Number(record.y).toFixed(3)}<br>
             Z: ${Number(record.z).toFixed(3)}
           </div>
+          <div class="list-buttons">
+            <button class="danger" onclick="deleteRecord(${index})">削除</button>
+          </div>
         </div>
       `).join("");
+    }
+
+    function deleteRecord(index) {
+      const records = getRecords();
+      const target = records[index];
+      if (!target) return;
+
+      const ok = confirm(`${target.pointName || "この点"} を削除しますか？`);
+      if (!ok) return;
+
+      records.splice(index, 1);
+      saveRecords(records);
+      renderRecordList();
+      loadPointSelectors();
     }
 
     function manualAdd() {

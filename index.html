@@ -23,10 +23,17 @@
     }
     input {
       width: 100%;
-      margin-bottom: 4px;
+      margin-bottom: 8px;
       padding: 10px;
       font-size: 16px;
       box-sizing: border-box;
+    }
+    .dms-row {
+      display: flex;
+      gap: 8px;
+    }
+    .dms-row div {
+      flex: 1;
     }
     button {
       width: 100%;
@@ -53,7 +60,7 @@
 </head>
 <body>
 
-<h2>TS座標計算（後視点対応）</h2>
+<h2>TS座標計算（後視点・DMS対応）</h2>
 
 <label>器械点 X（北）</label>
 <input id="x0" type="number" step="any" />
@@ -67,8 +74,18 @@
 <label>後視点 Y（東）</label>
 <input id="yb" type="number" step="any" />
 
-<label>水平角（度）</label>
-<input id="hz" type="number" step="any" />
+<label>水平角（°′″）</label>
+<div class="dms-row">
+  <div>
+    <input id="hzDeg" type="number" step="1" placeholder="度" />
+  </div>
+  <div>
+    <input id="hzMin" type="number" step="1" placeholder="分" />
+  </div>
+  <div>
+    <input id="hzSec" type="number" step="any" placeholder="秒" />
+  </div>
+</div>
 
 <label>距離（m）</label>
 <input id="dist" type="number" step="any" />
@@ -96,6 +113,10 @@ function normalizeDeg(deg) {
   return result;
 }
 
+function dmsToDeg(deg, min, sec) {
+  return deg + min / 60 + sec / 3600;
+}
+
 function calcAzimuthFromNorth(x1, y1, x2, y2) {
   const dx = x2 - x1; // 北方向成分
   const dy = y2 - y1; // 東方向成分
@@ -110,14 +131,18 @@ function calc() {
   const y0 = parseFloat(document.getElementById("y0").value);
   const xb = parseFloat(document.getElementById("xb").value);
   const yb = parseFloat(document.getElementById("yb").value);
-  const hz = parseFloat(document.getElementById("hz").value);
+
+  const hzDeg = parseFloat(document.getElementById("hzDeg").value) || 0;
+  const hzMin = parseFloat(document.getElementById("hzMin").value) || 0;
+  const hzSec = parseFloat(document.getElementById("hzSec").value) || 0;
+
   const dist = parseFloat(document.getElementById("dist").value);
   const result = document.getElementById("result");
 
   if (
     isNaN(x0) || isNaN(y0) ||
     isNaN(xb) || isNaN(yb) ||
-    isNaN(hz) || isNaN(dist)
+    isNaN(dist)
   ) {
     result.innerText = "未入力または数値でない項目があります。";
     return;
@@ -128,6 +153,13 @@ function calc() {
     return;
   }
 
+  if (hzMin < 0 || hzMin >= 60 || hzSec < 0 || hzSec >= 60) {
+    result.innerText = "分・秒は 0以上60未満で入力してください。";
+    return;
+  }
+
+  const hz = dmsToDeg(hzDeg, hzMin, hzSec);
+
   const backsightAz = calcAzimuthFromNorth(x0, y0, xb, yb);
   const targetAz = normalizeDeg(backsightAz + hz);
   const rad = degToRad(targetAz);
@@ -137,6 +169,7 @@ function calc() {
   const y = y0 + dist * Math.sin(rad);
 
   result.innerText =
+    "水平角: " + hz.toFixed(6) + "°\n" +
     "後視方位角: " + backsightAz.toFixed(4) + "°\n" +
     "観測方位角: " + targetAz.toFixed(4) + "°\n" +
     "計算座標 X: " + x.toFixed(3) + "\n" +

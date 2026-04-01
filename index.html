@@ -55,16 +55,16 @@
 
 <h2>TS座標計算（後視点対応）</h2>
 
-<label>器械点 X</label>
+<label>器械点 X（北）</label>
 <input id="x0" type="number" step="any" />
 
-<label>器械点 Y</label>
+<label>器械点 Y（東）</label>
 <input id="y0" type="number" step="any" />
 
-<label>後視点 X</label>
+<label>後視点 X（北）</label>
 <input id="xb" type="number" step="any" />
 
-<label>後視点 Y</label>
+<label>後視点 Y（東）</label>
 <input id="yb" type="number" step="any" />
 
 <label>水平角（度）</label>
@@ -76,7 +76,7 @@
 <button onclick="calc()">計算</button>
 
 <div class="note">
-  ※ 水平角は「後視方向を基準に右回りで読んだ角」として計算
+  ※ X＝北、Y＝東。水平角は後視方向を基準に右回りで読んだ角として計算。
 </div>
 
 <div class="result" id="result">ここに結果が出る</div>
@@ -97,13 +97,11 @@ function normalizeDeg(deg) {
 }
 
 function calcAzimuthFromNorth(x1, y1, x2, y2) {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
+  const dx = x2 - x1; // 北方向成分
+  const dy = y2 - y1; // 東方向成分
 
-  // 北を0°、東回りではなく、
-  // この式で X=東西, Y=南北 として
-  // 北=0°, 東=90°, 南=180°, 西=270°
-  const rad = Math.atan2(dx, dy);
+  // 北を0°、右回り
+  const rad = Math.atan2(dy, dx);
   return normalizeDeg(radToDeg(rad));
 }
 
@@ -121,12 +119,12 @@ function calc() {
     isNaN(xb) || isNaN(yb) ||
     isNaN(hz) || isNaN(dist)
   ) {
-    result.innerText = "未入力または数値でない項目がある。見直せ。";
+    result.innerText = "未入力または数値でない項目があります。";
     return;
   }
 
   if (x0 === xb && y0 === yb) {
-    result.innerText = "器械点と後視点が同じ座標だ。これでは方位が決まらん。";
+    result.innerText = "器械点と後視点が同じ座標です。方位角を計算できません。";
     return;
   }
 
@@ -134,8 +132,9 @@ function calc() {
   const targetAz = normalizeDeg(backsightAz + hz);
   const rad = degToRad(targetAz);
 
-  const x = x0 + dist * Math.sin(rad);
-  const y = y0 + dist * Math.cos(rad);
+  // X=北, Y=東
+  const x = x0 + dist * Math.cos(rad);
+  const y = y0 + dist * Math.sin(rad);
 
   result.innerText =
     "後視方位角: " + backsightAz.toFixed(4) + "°\n" +

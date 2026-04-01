@@ -31,9 +31,16 @@
     .dms-row {
       display: flex;
       gap: 8px;
+      align-items: end;
     }
-    .dms-row div {
+    .dms-col {
       flex: 1;
+    }
+    .dms-col label {
+      margin-top: 0;
+      font-weight: normal;
+      font-size: 14px;
+      color: #555;
     }
     button {
       width: 100%;
@@ -74,16 +81,19 @@
 <label>後視点 Y（東）</label>
 <input id="yb" type="number" step="any" />
 
-<label>水平角（°′″）</label>
+<label>挟角</label>
 <div class="dms-row">
-  <div>
-    <input id="hzDeg" type="number" step="1" placeholder="度" />
+  <div class="dms-col">
+    <label for="angleDeg">度</label>
+    <input id="angleDeg" type="number" step="1" placeholder="度" />
   </div>
-  <div>
-    <input id="hzMin" type="number" step="1" placeholder="分" />
+  <div class="dms-col">
+    <label for="angleMin">分</label>
+    <input id="angleMin" type="number" step="1" placeholder="分" />
   </div>
-  <div>
-    <input id="hzSec" type="number" step="any" placeholder="秒" />
+  <div class="dms-col">
+    <label for="angleSec">秒</label>
+    <input id="angleSec" type="number" step="any" placeholder="秒" />
   </div>
 </div>
 
@@ -93,7 +103,7 @@
 <button onclick="calc()">計算</button>
 
 <div class="note">
-  ※ X＝北、Y＝東。水平角は後視方向を基準に右回りで読んだ角として計算。
+  ※ X＝北、Y＝東。挟角は後視方向を基準に右回りで読んだ角として計算。
 </div>
 
 <div class="result" id="result">ここに結果が出る</div>
@@ -120,9 +130,7 @@ function dmsToDeg(deg, min, sec) {
 function calcAzimuthFromNorth(x1, y1, x2, y2) {
   const dx = x2 - x1; // 北方向成分
   const dy = y2 - y1; // 東方向成分
-
-  // 北を0°、右回り
-  const rad = Math.atan2(dy, dx);
+  const rad = Math.atan2(dy, dx); // 北を0°、右回り
   return normalizeDeg(radToDeg(rad));
 }
 
@@ -132,9 +140,9 @@ function calc() {
   const xb = parseFloat(document.getElementById("xb").value);
   const yb = parseFloat(document.getElementById("yb").value);
 
-  const hzDeg = parseFloat(document.getElementById("hzDeg").value) || 0;
-  const hzMin = parseFloat(document.getElementById("hzMin").value) || 0;
-  const hzSec = parseFloat(document.getElementById("hzSec").value) || 0;
+  const angleDeg = parseFloat(document.getElementById("angleDeg").value) || 0;
+  const angleMin = parseFloat(document.getElementById("angleMin").value) || 0;
+  const angleSec = parseFloat(document.getElementById("angleSec").value) || 0;
 
   const dist = parseFloat(document.getElementById("dist").value);
   const result = document.getElementById("result");
@@ -153,15 +161,15 @@ function calc() {
     return;
   }
 
-  if (hzMin < 0 || hzMin >= 60 || hzSec < 0 || hzSec >= 60) {
+  if (angleMin < 0 || angleMin >= 60 || angleSec < 0 || angleSec >= 60) {
     result.innerText = "分・秒は 0以上60未満で入力してください。";
     return;
   }
 
-  const hz = dmsToDeg(hzDeg, hzMin, hzSec);
+  const angle = dmsToDeg(angleDeg, angleMin, angleSec);
 
   const backsightAz = calcAzimuthFromNorth(x0, y0, xb, yb);
-  const targetAz = normalizeDeg(backsightAz + hz);
+  const targetAz = normalizeDeg(backsightAz + angle);
   const rad = degToRad(targetAz);
 
   // X=北, Y=東
@@ -169,7 +177,7 @@ function calc() {
   const y = y0 + dist * Math.sin(rad);
 
   result.innerText =
-    "水平角: " + hz.toFixed(6) + "°\n" +
+    "挟角: " + angle.toFixed(6) + "°\n" +
     "後視方位角: " + backsightAz.toFixed(4) + "°\n" +
     "観測方位角: " + targetAz.toFixed(4) + "°\n" +
     "計算座標 X: " + x.toFixed(3) + "\n" +

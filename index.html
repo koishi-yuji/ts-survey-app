@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TS座標計算</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 400px;
+      margin: auto;
+    }
+    input {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      font-size: 16px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 18px;
+    }
+    .result {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<h2>TS座標計算（試作）</h2>
+
+<label>器械点 X</label>
+<input id="x0" type="number" />
+
+<label>器械点 Y</label>
+<input id="y0" type="number" />
+
+<label>基準方位角（度）</label>
+<input id="az0" type="number" />
+
+<label>水平角（度）</label>
+<input id="hz" type="number" />
+
+<label>距離（m）</label>
+<input id="dist" type="number" />
+
+<button onclick="calc()">計算</button>
+
+<div class="result" id="result"></div>
+
+<script>
+function degToRad(deg) {
+  return deg * Math.PI / 180;
+}
+
+function calc() {
+  const x0 = parseFloat(document.getElementById("x0").value);
+  const y0 = parseFloat(document.getElementById("y0").value);
+  const az0 = parseFloat(document.getElementById("az0").value);
+  const hz = parseFloat(document.getElementById("hz").value);
+  const dist = parseFloat(document.getElementById("dist").value);
+
+  const az = az0 + hz;
+  const rad = degToRad(az);
+
+  const x = x0 + dist * Math.sin(rad);
+  const y = y0 + dist * Math.cos(rad);
+
+  document.getElementById("result").innerText =
+    "X: " + x.toFixed(3) + " , Y: " + y.toFixed(3);
+}
+</script>
+
+</body>
+</html>

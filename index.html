@@ -237,6 +237,128 @@
       <option value="">選択してください</option>
     </select>
 
+    <label>器械点</label>
+    <div class="coord-row">
+      <div class="coord-col">
+        <label for="x0">X（北）</label>
+        <input id="x0" type="number" step="any" />
+      </div>
+      <div class="coord-col">
+        <label for="y0">Y（東）</label>
+        <input id="y0" type="number" step="any" />
+      </div>
+    </div>
+    <div class="coord-z">
+      <label for="z0">Z</label>
+      <input id="z0" type="number" step="any" />
+    </div>
+
+    <label>後視点（リストから選択）</label>
+    <select id="bsSelect" onchange="applySelectedPoint('bs', '')">
+      <option value="">選択してください</option>
+    </select>
+
+    <label>後視点</label>
+    <div class="coord-row">
+      <div class="coord-col">
+        <label for="xb">X（北）</label>
+        <input id="xb" type="number" step="any" />
+      </div>
+      <div class="coord-col">
+        <label for="yb">Y（東）</label>
+        <input id="yb" type="number" step="any" />
+      </div>
+    </div>
+
+    <label>挟角</label>
+    <div class="dms-row">
+      <div class="dms-col">
+        <label for="angleDeg">度</label>
+        <input id="angleDeg" type="number" step="1" placeholder="度" />
+      </div>
+      <div class="dms-col">
+        <label for="angleMin">分</label>
+        <input id="angleMin" type="number" step="1" placeholder="分" />
+      </div>
+      <div class="dms-col">
+        <label for="angleSec">秒</label>
+        <input id="angleSec" type="number" step="any" placeholder="秒" />
+      </div>
+    </div>
+
+    <label>鉛直角（上0°）</label>
+    <div class="dms-row">
+      <div class="dms-col">
+        <label for="zenDeg">度</label>
+        <input id="zenDeg" type="number" step="1" placeholder="度" />
+      </div>
+      <div class="dms-col">
+        <label for="zenMin">分</label>
+        <input id="zenMin" type="number" step="1" placeholder="分" />
+      </div>
+      <div class="dms-col">
+        <label for="zenSec">秒</label>
+        <input id="zenSec" type="number" step="any" placeholder="秒" />
+      </div>
+    </div>
+
+    <label>斜距離（m）</label>
+    <input id="slopeDist" type="number" step="any" />
+
+    <label>器械高（m）</label>
+    <input id="hi" type="number" step="any" />
+
+    <label>プリズム高（m）</label>
+    <input id="hp" type="number" step="any" value="0" />
+
+    <button onclick="calc()">計算</button>
+    <button class="secondary" onclick="addCurrentResultToList()">一覧に追加</button>
+
+    <div class="note">
+      ※ X＝北、Y＝東。挟角は後視方向を基準に右回り。<br>
+      ※ 鉛直角は「上が0°、水平が90°、下が180°」として計算。
+    </div>
+
+    <div id="result" class="result">ここに結果が出る</div>
+    <div id="addMessage" class="success"></div>
+  </section>
+
+  <section id="stakeoutScreen" class="screen">
+    <div class="top-actions">
+      <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
+    </div>
+
+    <h2>TS座標測設</h2>
+
+    <label>目標点名</label>
+    <input id="stakeoutPointName" type="text" placeholder="例: S1" />
+
+    <label>器械点（リストから選択）</label>
+    <select id="stakeoutInstSelect" onchange="applySelectedPoint('inst', 'stakeout')">
+      <option value="">選択してください</option>
+    </select>
+
+    <label>器械点</label>
+    <div class="coord-row">
+      <div class="coord-col">
+        <label for="stakeoutX0">X（北）</label>
+        <input id="stakeoutX0" type="number" step="any" />
+      </div>
+      <div class="coord-col">
+        <label for="stakeoutY0">Y（東）</label>
+        <input id="stakeoutY0" type="number" step="any" />
+      </div>
+    </div>
+    <div class="coord-z">
+      <label for="stakeoutZ0">Z</label>
+      <input id="stakeoutZ0" type="number" step="any" />
+    </div>
+
+    <label>後視点（リストから選択）</label>
+    <select id="stakeoutBsSelect" onchange="applySelectedPoint('bs', 'stakeout')">
+      <option value="">選択してください</option>
+    </select>
+
     <label>後視点</label>
     <div class="coord-row">
       <div class="coord-col">
@@ -265,12 +387,21 @@
         <input id="stakeoutYt" type="number" step="any" />
       </div>
     </div>
+    <div class="coord-z">
+      <label for="stakeoutZt">Z</label>
+      <input id="stakeoutZt" type="number" step="any" />
+    </div>
+
+    <label>器械高（m）</label>
+    <input id="stakeoutHi" type="number" step="any" />
+
+    <label>プリズム高（m）</label>
+    <input id="stakeoutHp" type="number" step="any" value="0" />
+
     <button onclick="calcStakeout()">計算</button>
 
     <div class="note">
       ※ X＝北、Y＝東。後視方向を0として、右回りの挟角を表示します。<br>
-      ※ TS座標測設では平面の挟角・水平距離を主表示にしています.
-    
       ※ 斜距離・水平距離・高低差・鉛直角（上0°）も計算します。
     </div>
 
@@ -852,15 +983,15 @@
       if (type === "inst") {
         document.getElementById(isRoute ? "routeX0" : (isStakeout ? "stakeoutX0" : "x0")).value = Number(record.x).toFixed(3);
         document.getElementById(isRoute ? "routeY0" : (isStakeout ? "stakeoutY0" : "y0")).value = Number(record.y).toFixed(3);
-        if (!isStakeout) {
-          document.getElementById(isRoute ? "routeZ0" : "z0").value = Number(record.z).toFixed(3);
-        }
+        document.getElementById(isRoute ? "routeZ0" : (isStakeout ? "stakeoutZ0" : "z0")).value = Number(record.z).toFixed(3);
       } else if (type === "bs") {
         document.getElementById(isRoute ? "routeXb" : (isStakeout ? "stakeoutXb" : "xb")).value = Number(record.x).toFixed(3);
         document.getElementById(isRoute ? "routeYb" : (isStakeout ? "stakeoutYb" : "yb")).value = Number(record.y).toFixed(3);
       } else if (type === "target") {
+        document.getElementById("stakeoutPointName").value = record.pointName || "";
         document.getElementById("stakeoutXt").value = Number(record.x).toFixed(3);
         document.getElementById("stakeoutYt").value = Number(record.y).toFixed(3);
+        document.getElementById("stakeoutZt").value = Number(record.z).toFixed(3);
       }
     }
 
@@ -1009,10 +1140,15 @@
     }
 
     function computeStakeoutFromCoordinate(input) {
+      if (!input.pointName) {
+        return { error: "目標点名を入力してください。" };
+      }
+
       if (
-        isNaN(input.x0) || isNaN(input.y0) ||
+        isNaN(input.x0) || isNaN(input.y0) || isNaN(input.z0) ||
         isNaN(input.xb) || isNaN(input.yb) ||
-        isNaN(input.xt) || isNaN(input.yt)
+        isNaN(input.xt) || isNaN(input.yt) || isNaN(input.zt) ||
+        isNaN(input.hi) || isNaN(input.hp)
       ) {
         return { error: "未入力または数値でない項目があります。" };
       }
@@ -1021,7 +1157,7 @@
         return { error: "器械点と後視点が同じ座標です。方位角を計算できません。" };
       }
 
-      if (input.x0 === input.xt && input.y0 === input.yt) {
+      if (input.x0 === input.xt && input.y0 === input.yt && input.z0 + input.hi === input.zt + input.hp) {
         return { error: "器械点と目標点が同一点です。" };
       }
 
@@ -1032,18 +1168,35 @@
       const dx = input.xt - input.x0;
       const dy = input.yt - input.y0;
       const horizontalDist = Math.hypot(dx, dy);
+      const deltaZ = (input.zt + input.hp) - (input.z0 + input.hi);
+      const slopeDist = Math.hypot(horizontalDist, deltaZ);
+
+      let verticalAngle;
+      if (slopeDist === 0) {
+        verticalAngle = 0;
+      } else {
+        verticalAngle = radToDeg(Math.acos(clamp(deltaZ / slopeDist, -1, 1)));
+      }
 
       return {
+        pointName: input.pointName,
         x0: input.x0,
         y0: input.y0,
+        z0: input.z0,
         xb: input.xb,
         yb: input.yb,
         xt: input.xt,
         yt: input.yt,
+        zt: input.zt,
+        hi: input.hi,
+        hp: input.hp,
         backsightAz,
         targetAz,
         angle,
-        horizontalDist
+        horizontalDist,
+        deltaZ,
+        slopeDist,
+        verticalAngle
       };
     }
 
@@ -1100,12 +1253,17 @@
 
     function calcStakeout() {
       const input = {
+        pointName: document.getElementById("stakeoutPointName").value.trim(),
         x0: parseFloat(document.getElementById("stakeoutX0").value),
         y0: parseFloat(document.getElementById("stakeoutY0").value),
+        z0: parseFloat(document.getElementById("stakeoutZ0").value),
         xb: parseFloat(document.getElementById("stakeoutXb").value),
         yb: parseFloat(document.getElementById("stakeoutYb").value),
         xt: parseFloat(document.getElementById("stakeoutXt").value),
-        yt: parseFloat(document.getElementById("stakeoutYt").value)
+        yt: parseFloat(document.getElementById("stakeoutYt").value),
+        zt: parseFloat(document.getElementById("stakeoutZt").value),
+        hi: parseFloat(document.getElementById("stakeoutHi").value),
+        hp: parseFloat(document.getElementById("stakeoutHp").value)
       };
 
       const result = computeStakeoutFromCoordinate(input);
@@ -1117,14 +1275,20 @@
       document.getElementById("stakeoutResult").innerHTML =
         `<div class="big">
           挟角 ${formatDms(result.angle)}<br>
-          水平距離 ${result.horizontalDist.toFixed(3)} m
+          斜距離 ${result.slopeDist.toFixed(3)} m
         </div>
         <div class="small">
+          目標点名: ${escapeHtml(result.pointName)}<br>
           後視方位角: ${result.backsightAz.toFixed(4)}°<br>
           目標方位角: ${result.targetAz.toFixed(4)}°<br>
           挟角（度表示）: ${result.angle.toFixed(6)}°<br>
+          鉛直角（上0°）: ${formatDms(result.verticalAngle)}<br>
+          鉛直角（度表示）: ${result.verticalAngle.toFixed(6)}°<br>
+          水平距離: ${result.horizontalDist.toFixed(3)} m<br>
+          高低差: ${result.deltaZ.toFixed(3)} m<br>
           目標座標 X: ${result.xt.toFixed(3)}<br>
-          目標座標 Y: ${result.yt.toFixed(3)}
+          目標座標 Y: ${result.yt.toFixed(3)}<br>
+          目標座標 Z: ${result.zt.toFixed(3)}
         </div>`;
     }
 

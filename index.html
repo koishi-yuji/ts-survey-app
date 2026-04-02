@@ -865,7 +865,8 @@
       if (abs < 0.0005) {
         return "中心線上 0.000 m";
       }
-      return (signedOffset < 0 ? "右 " : "左 ") + abs.toFixed(3) + " m";
+      /* 表示だけ右左を逆転 */
+      return (signedOffset < 0 ? "左 " : "右 ") + abs.toFixed(3) + " m";
     }
 
     function stationToMeters(noValue, plusValue, pitch) {

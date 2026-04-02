@@ -147,8 +147,7 @@
 
     .dms-row,
     .coord-row,
-    .station-row,
-    .dual-row {
+    .station-row {
       display: flex;
       gap: 8px;
       align-items: end;
@@ -156,16 +155,14 @@
 
     .dms-col,
     .coord-col,
-    .station-col,
-    .dual-col {
+    .station-col {
       flex: 1;
     }
 
     .dms-col label,
     .coord-col label,
     .coord-z label,
-    .station-col label,
-    .dual-col label {
+    .station-col label {
       margin-top: 0;
       font-weight: normal;
       font-size: 14px;
@@ -220,8 +217,8 @@
     <div class="note">
       ※ スマホ内に保存します。<br>
       ※ CSVインポートは追加です。既存データは消えません。<br>
-      ※ 路線は「直線」「単曲線（BP・IP・EP・R）」に対応です。<br>
-      ※ 路線条件入力後に「路線測量」「路線測設」を選べます。
+      ※ 路線測量は「直線」「単曲線（BP・IP・EP・R）」に対応です。<br>
+      ※ TS座標測設は、器械点・後視点・目標座標から挟角と距離を求めます。
     </div>
   </section>
 
@@ -399,7 +396,7 @@
       <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
     </div>
 
-    <h2>路線条件入力</h2>
+    <h2>路線測量</h2>
 
     <label>線形種別</label>
     <select id="routeType" onchange="onRouteTypeChange()">
@@ -468,7 +465,7 @@
     <label>測点ピッチ（m）</label>
     <input id="routePitch" type="number" step="any" value="20" />
 
-    <button onclick="prepareRoute()">次へ</button>
+    <button onclick="prepareRouteMeasurement()">次へ</button>
 
     <div class="note" id="routeSetupNote">
       ※ BP測点は No. と +m で入力します。<br>
@@ -480,27 +477,9 @@
     <div id="routeSetupError" class="result" style="display:none;"></div>
   </section>
 
-  <section id="routeModeScreen" class="screen">
-    <div class="top-actions">
-      <button class="secondary" onclick="showScreen('routeSetupScreen')">条件入力へ戻る</button>
-      <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
-    </div>
-
-    <h2>路線メニュー</h2>
-    <div id="routeModeSummary" class="summary-box">ここに路線情報が出る</div>
-
-    <button onclick="openRouteCalcScreen()">路線測量</button>
-    <button onclick="openRouteStakeoutScreen()">路線測設</button>
-
-    <div class="note">
-      ※ 路線測量：観測した点から測点と右左幅を求めます。<br>
-      ※ 路線測設：指定した測点と幅から、挟角と距離を求めます。
-    </div>
-  </section>
-
   <section id="routeCalcScreen" class="screen">
     <div class="top-actions">
-      <button class="secondary" onclick="showScreen('routeModeScreen')">路線メニューへ戻る</button>
+      <button class="secondary" onclick="showScreen('routeSetupScreen')">条件入力へ戻る</button>
       <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
     </div>
 
@@ -597,101 +576,11 @@
 
     <div class="note">
       ※ X＝北、Y＝東。挟角は後視方向を基準に右回り。<br>
-      ※ 右左は、測点が増加する方向を向いたときの右左です。
+      ※ 路線座標の右左は、測点が増加する方向を向いたときの右左です。
     </div>
 
     <div id="routeResult" class="result">ここに結果が出る</div>
     <div id="routeAddMessage" class="success"></div>
-  </section>
-
-  <section id="routeStakeoutScreen" class="screen">
-    <div class="top-actions">
-      <button class="secondary" onclick="showScreen('routeModeScreen')">路線メニューへ戻る</button>
-      <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
-    </div>
-
-    <h2>路線測設</h2>
-
-    <div id="routeStakeoutSummary" class="summary-box">ここに路線情報が出る</div>
-
-    <div class="divider"></div>
-
-    <label>点名</label>
-    <input id="routeStakeoutPointName" type="text" placeholder="例: No0+5_R5" />
-
-    <label>器械点（リストから選択）</label>
-    <select id="routeStakeoutInstSelect" onchange="applySelectedPoint('inst', 'routeStakeout')">
-      <option value="">選択してください</option>
-    </select>
-
-    <label>器械点</label>
-    <div class="coord-row">
-      <div class="coord-col">
-        <label for="routeStakeoutX0">X（北）</label>
-        <input id="routeStakeoutX0" type="number" step="any" />
-      </div>
-      <div class="coord-col">
-        <label for="routeStakeoutY0">Y（東）</label>
-        <input id="routeStakeoutY0" type="number" step="any" />
-      </div>
-    </div>
-
-    <label>後視点（リストから選択）</label>
-    <select id="routeStakeoutBsSelect" onchange="applySelectedPoint('bs', 'routeStakeout')">
-      <option value="">選択してください</option>
-    </select>
-
-    <label>後視点</label>
-    <div class="coord-row">
-      <div class="coord-col">
-        <label for="routeStakeoutXb">X（北）</label>
-        <input id="routeStakeoutXb" type="number" step="any" />
-      </div>
-      <div class="coord-col">
-        <label for="routeStakeoutYb">Y（東）</label>
-        <input id="routeStakeoutYb" type="number" step="any" />
-      </div>
-    </div>
-
-    <h3>目的の測点</h3>
-    <div class="station-row">
-      <div class="station-col">
-        <label for="routeStakeoutStaNo">No.</label>
-        <input id="routeStakeoutStaNo" type="number" step="1" placeholder="例: 0" />
-      </div>
-      <div class="station-col">
-        <label for="routeStakeoutStaPlus">+m</label>
-        <input id="routeStakeoutStaPlus" type="number" step="any" placeholder="例: 5.000" />
-      </div>
-    </div>
-
-    <h3>幅</h3>
-    <div class="dual-row">
-      <div class="dual-col">
-        <label for="routeStakeoutSide">左右</label>
-        <select id="routeStakeoutSide">
-          <option value="right">右</option>
-          <option value="left">左</option>
-          <option value="center">中心</option>
-        </select>
-      </div>
-      <div class="dual-col">
-        <label for="routeStakeoutOffset">幅（m）</label>
-        <input id="routeStakeoutOffset" type="number" step="any" value="0" />
-      </div>
-    </div>
-
-    <button onclick="calcRouteStakeout()">計算</button>
-    <button class="secondary" onclick="addCurrentRouteStakeoutToList()">一覧に追加</button>
-
-    <div class="note">
-      ※ 目的点は、指定した測点位置の中心線から右左幅で作成します。<br>
-      ※ 挟角は後視方向を0として右回り表示です。<br>
-      ※ 距離は平面距離です。
-    </div>
-
-    <div id="routeStakeoutResult" class="result">ここに結果が出る</div>
-    <div id="routeStakeoutAddMessage" class="success"></div>
   </section>
 
   <section id="listScreen" class="screen">
@@ -740,12 +629,11 @@
   </section>
 
   <script>
-    const STORAGE_KEY = "ts_coordinate_records_v6";
-    const ROUTE_STORAGE_KEY = "ts_current_route_v3";
+    const STORAGE_KEY = "ts_coordinate_records_v5";
+    const ROUTE_STORAGE_KEY = "ts_current_route_v2";
 
     let currentCalculatedRecord = null;
     let currentRouteCalculatedRecord = null;
-    let currentRouteStakeoutRecord = null;
     let currentRoute = null;
 
     function showScreen(screenId) {
@@ -770,20 +658,6 @@
       hideRouteSetupError();
       onRouteTypeChange();
       showScreen("routeSetupScreen");
-    }
-
-    function openRouteCalcScreen() {
-      const route = loadCurrentRoute();
-      updateAllRouteSummaries(route);
-      loadPointSelectors();
-      showScreen("routeCalcScreen");
-    }
-
-    function openRouteStakeoutScreen() {
-      const route = loadCurrentRoute();
-      updateAllRouteSummaries(route);
-      loadPointSelectors();
-      showScreen("routeStakeoutScreen");
     }
 
     function showListScreen() {
@@ -878,7 +752,12 @@
         d += 1;
       }
 
-      return { sign, deg: d, min: m, sec: s };
+      return {
+        sign,
+        deg: d,
+        min: m,
+        sec: s
+      };
     }
 
     function formatDms(degValue) {
@@ -978,7 +857,7 @@
       const dist = lengthVec(fromProjectedToPoint);
       if (dist === 0) return 0;
       const cross = crossVec(directionUnit, fromProjectedToPoint);
-      return cross < 0 ? dist : -dist;
+      return cross >= 0 ? dist : -dist;
     }
 
     function offsetTextFromSigned(signedOffset) {
@@ -986,7 +865,8 @@
       if (abs < 0.0005) {
         return "中心線上 0.000 m";
       }
-      return (signedOffset > 0 ? "右 " : "左 ") + abs.toFixed(3) + " m";
+      /* 表示だけ右左を逆転 */
+      return (signedOffset < 0 ? "左 " : "右 ") + abs.toFixed(3) + " m";
     }
 
     function stationToMeters(noValue, plusValue, pitch) {
@@ -1023,8 +903,7 @@
       const selectPairs = [
         { instId: "instSelect", bsId: "bsSelect" },
         { instId: "routeInstSelect", bsId: "routeBsSelect" },
-        { instId: "stakeoutInstSelect", bsId: "stakeoutBsSelect", targetId: "stakeoutTargetSelect" },
-        { instId: "routeStakeoutInstSelect", bsId: "routeStakeoutBsSelect" }
+        { instId: "stakeoutInstSelect", bsId: "stakeoutBsSelect", targetId: "stakeoutTargetSelect" }
       ];
 
       selectPairs.forEach(pair => {
@@ -1068,28 +947,18 @@
       const records = getRecords();
       const isRoute = prefix === "route";
       const isStakeout = prefix === "stakeout";
-      const isRouteStakeout = prefix === "routeStakeout";
 
       let select = null;
       if (type === "inst") {
-        select = document.getElementById(
-          isRoute ? "routeInstSelect" :
-          isStakeout ? "stakeoutInstSelect" :
-          isRouteStakeout ? "routeStakeoutInstSelect" :
-          "instSelect"
-        );
+        select = document.getElementById(isRoute ? "routeInstSelect" : (isStakeout ? "stakeoutInstSelect" : "instSelect"));
       } else if (type === "bs") {
-        select = document.getElementById(
-          isRoute ? "routeBsSelect" :
-          isStakeout ? "stakeoutBsSelect" :
-          isRouteStakeout ? "routeStakeoutBsSelect" :
-          "bsSelect"
-        );
+        select = document.getElementById(isRoute ? "routeBsSelect" : (isStakeout ? "stakeoutBsSelect" : "bsSelect"));
       } else if (type === "target") {
         select = document.getElementById("stakeoutTargetSelect");
       }
 
       if (!select) return;
+
       const idx = select.value;
       if (idx === "") return;
 
@@ -1097,37 +966,15 @@
       if (!record) return;
 
       if (type === "inst") {
-        document.getElementById(
-          isRoute ? "routeX0" :
-          isStakeout ? "stakeoutX0" :
-          isRouteStakeout ? "routeStakeoutX0" :
-          "x0"
-        ).value = Number(record.x).toFixed(3);
+        document.getElementById(isRoute ? "routeX0" : (isStakeout ? "stakeoutX0" : "x0")).value = Number(record.x).toFixed(3);
+        document.getElementById(isRoute ? "routeY0" : (isStakeout ? "stakeoutY0" : "y0")).value = Number(record.y).toFixed(3);
 
-        document.getElementById(
-          isRoute ? "routeY0" :
-          isStakeout ? "stakeoutY0" :
-          isRouteStakeout ? "routeStakeoutY0" :
-          "y0"
-        ).value = Number(record.y).toFixed(3);
-
-        if (!isStakeout && !isRouteStakeout) {
+        if (!isStakeout) {
           document.getElementById(isRoute ? "routeZ0" : "z0").value = Number(record.z).toFixed(3);
         }
       } else if (type === "bs") {
-        document.getElementById(
-          isRoute ? "routeXb" :
-          isStakeout ? "stakeoutXb" :
-          isRouteStakeout ? "routeStakeoutXb" :
-          "xb"
-        ).value = Number(record.x).toFixed(3);
-
-        document.getElementById(
-          isRoute ? "routeYb" :
-          isStakeout ? "stakeoutYb" :
-          isRouteStakeout ? "routeStakeoutYb" :
-          "yb"
-        ).value = Number(record.y).toFixed(3);
+        document.getElementById(isRoute ? "routeXb" : (isStakeout ? "stakeoutXb" : "xb")).value = Number(record.x).toFixed(3);
+        document.getElementById(isRoute ? "routeYb" : (isStakeout ? "stakeoutYb" : "yb")).value = Number(record.y).toFixed(3);
       } else if (type === "target") {
         document.getElementById("stakeoutXt").value = Number(record.x).toFixed(3);
         document.getElementById("stakeoutYt").value = Number(record.y).toFixed(3);
@@ -1146,11 +993,6 @@
     function showRouteError(message) {
       document.getElementById("routeResult").innerHTML = `<div class="error">${escapeHtml(message)}</div>`;
       currentRouteCalculatedRecord = null;
-    }
-
-    function showRouteStakeoutError(message) {
-      document.getElementById("routeStakeoutResult").innerHTML = `<div class="error">${escapeHtml(message)}</div>`;
-      currentRouteStakeoutRecord = null;
     }
 
     function showRouteSetupError(message) {
@@ -1307,6 +1149,7 @@
       const dx = input.xt - input.x0;
       const dy = input.yt - input.y0;
       const horizontalDist = Math.hypot(dx, dy);
+      const slopeDist = horizontalDist;
 
       return {
         x0: input.x0,
@@ -1319,7 +1162,7 @@
         targetAz,
         angle,
         horizontalDist,
-        slopeDist: horizontalDist
+        slopeDist
       };
     }
 
@@ -1554,7 +1397,7 @@
       };
     }
 
-    function prepareRoute() {
+    function prepareRouteMeasurement() {
       hideRouteSetupError();
       document.getElementById("routeSetupMessage").textContent = "";
 
@@ -1628,48 +1471,43 @@
         }
 
         saveCurrentRoute(route);
-        updateAllRouteSummaries(route);
+        updateRouteSummary(route);
         loadPointSelectors();
         document.getElementById("routeSetupMessage").textContent = "路線条件を設定しました。";
-        showScreen("routeModeScreen");
+        showScreen("routeCalcScreen");
       } catch (error) {
         showRouteSetupError(error.message || "路線条件の計算に失敗しました。");
       }
     }
 
-    function buildRouteSummaryHtml(route) {
+    function updateRouteSummary(route) {
+      const summary = document.getElementById("routeSummary");
       if (!route) {
-        return "路線情報がありません。";
+        summary.innerHTML = "路線情報がありません。";
+        return;
       }
 
       if (route.routeType === "straight") {
-        return `路線名: ${escapeHtml(route.routeName)}<br>
+        summary.innerHTML =
+          `路線名: ${escapeHtml(route.routeName)}<br>
           線形種別: 直線<br>
           BP測点: ${formatStation(route.bpStation, route.pitch)}<br>
           EP測点: ${formatStation(route.epStation, route.pitch)}<br>
           延長: ${route.totalLength.toFixed(3)} m`;
+      } else {
+        summary.innerHTML =
+          `路線名: ${escapeHtml(route.routeName)}<br>
+          線形種別: Rを含む線形<br>
+          BP測点: ${formatStation(route.bpStation, route.pitch)}<br>
+          R: ${route.radius.toFixed(3)} m<br>
+          交角 Δ: ${route.deltaDeg.toFixed(6)}°<br>
+          曲線向き: ${route.turn === "left" ? "左カーブ" : "右カーブ"}<br>
+          接線長 T: ${route.tangentLength.toFixed(3)} m<br>
+          曲線長 L: ${route.curveLength.toFixed(3)} m<br>
+          BC測点: ${formatStation(route.bcStation, route.pitch)}<br>
+          EC測点: ${formatStation(route.ecStation, route.pitch)}<br>
+          EP測点: ${formatStation(route.epStation, route.pitch)}`;
       }
-
-      return `路線名: ${escapeHtml(route.routeName)}<br>
-        線形種別: Rを含む線形<br>
-        BP測点: ${formatStation(route.bpStation, route.pitch)}<br>
-        R: ${route.radius.toFixed(3)} m<br>
-        交角 Δ: ${route.deltaDeg.toFixed(6)}°<br>
-        曲線向き: ${route.turn === "left" ? "左カーブ" : "右カーブ"}<br>
-        接線長 T: ${route.tangentLength.toFixed(3)} m<br>
-        曲線長 L: ${route.curveLength.toFixed(3)} m<br>
-        BC測点: ${formatStation(route.bcStation, route.pitch)}<br>
-        EC測点: ${formatStation(route.ecStation, route.pitch)}<br>
-        EP測点: ${formatStation(route.epStation, route.pitch)}`;
-    }
-
-    function updateAllRouteSummaries(route) {
-      const html = buildRouteSummaryHtml(route);
-      const ids = ["routeModeSummary", "routeSummary", "routeStakeoutSummary"];
-      ids.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = html;
-      });
     }
 
     function projectPointToStraightRoute(route, point) {
@@ -1784,7 +1622,7 @@
         return;
       }
 
-      updateAllRouteSummaries(route);
+      updateRouteSummary(route);
 
       const obs = getTsObservationFromIds({
         pointName: "routePointName",
@@ -1876,235 +1714,6 @@
       loadPointSelectors();
     }
 
-    function getPointOnStraightRoute(route, station) {
-      const local = station - route.bpStation;
-      const total = route.epStation - route.bpStation;
-      if (local < -1e-9 || local > total + 1e-9) {
-        throw new Error("指定した測点が路線範囲外です。");
-      }
-
-      const clamped = clamp(local, 0, total);
-      const centerPoint = addVec(route.bp, scaleVec(route.directionUnit, clamped));
-      const tangentUnit = route.directionUnit;
-
-      return {
-        section: "BP-EP",
-        centerPoint,
-        tangentUnit
-      };
-    }
-
-    function getPointOnCurveRoute(route, station) {
-      if (station < route.bpStation - 1e-9 || station > route.epStation + 1e-9) {
-        throw new Error("指定した測点が路線範囲外です。");
-      }
-
-      if (station <= route.bcStation + 1e-9) {
-        const distFromBp = clamp(station - route.bpStation, 0, distance(route.bp, route.bc));
-        return {
-          section: "BP-BC",
-          centerPoint: addVec(route.bp, scaleVec(route.inUnit, distFromBp)),
-          tangentUnit: route.inUnit
-        };
-      }
-
-      if (station <= route.ecStation + 1e-9) {
-        const arcLength = clamp(station - route.bcStation, 0, route.curveLength);
-        const thetaBC = Math.atan2(route.bc.y - route.center.y, route.bc.x - route.center.x);
-        const deltaTheta = arcLength / route.radius;
-        const theta = route.turn === "left"
-          ? thetaBC + deltaTheta
-          : thetaBC - deltaTheta;
-
-        const radialUnit = {
-          x: Math.cos(theta),
-          y: Math.sin(theta)
-        };
-
-        const centerPoint = addVec(route.center, scaleVec(radialUnit, route.radius));
-        const tangentUnit = route.turn === "left"
-          ? leftNormal(radialUnit)
-          : rightNormal(radialUnit);
-
-        return {
-          section: "BC-EC",
-          centerPoint,
-          tangentUnit: normalizeVec(tangentUnit)
-        };
-      }
-
-      const distFromEc = clamp(station - route.ecStation, 0, distance(route.ec, route.ep));
-      return {
-        section: "EC-EP",
-        centerPoint: addVec(route.ec, scaleVec(route.outUnit, distFromEc)),
-        tangentUnit: route.outUnit
-      };
-    }
-
-    function signedOffsetFromSide(side, offset) {
-      if (side === "center") return 0;
-      if (side === "right") return Math.abs(offset);
-      return -Math.abs(offset);
-    }
-
-    function buildStakeoutTargetPoint(route, station, signedOffset) {
-      const centerInfo = route.routeType === "straight"
-        ? getPointOnStraightRoute(route, station)
-        : getPointOnCurveRoute(route, station);
-
-      const offsetVec = signedOffset > 0
-        ? scaleVec(rightNormal(centerInfo.tangentUnit), Math.abs(signedOffset))
-        : signedOffset < 0
-          ? scaleVec(leftNormal(centerInfo.tangentUnit), Math.abs(signedOffset))
-          : makePoint(0, 0);
-
-      return {
-        section: centerInfo.section,
-        centerPoint: centerInfo.centerPoint,
-        tangentUnit: centerInfo.tangentUnit,
-        targetPoint: addVec(centerInfo.centerPoint, offsetVec)
-      };
-    }
-
-    function calcRouteStakeout() {
-      document.getElementById("routeStakeoutAddMessage").textContent = "";
-
-      const route = loadCurrentRoute();
-      if (!route) {
-        showRouteStakeoutError("先に路線条件を設定してください。");
-        return;
-      }
-
-      updateAllRouteSummaries(route);
-
-      const pointName = document.getElementById("routeStakeoutPointName").value.trim();
-      const x0 = parseFloat(document.getElementById("routeStakeoutX0").value);
-      const y0 = parseFloat(document.getElementById("routeStakeoutY0").value);
-      const xb = parseFloat(document.getElementById("routeStakeoutXb").value);
-      const yb = parseFloat(document.getElementById("routeStakeoutYb").value);
-      const staNo = parseFloat(document.getElementById("routeStakeoutStaNo").value);
-      const staPlus = parseFloat(document.getElementById("routeStakeoutStaPlus").value);
-      const side = document.getElementById("routeStakeoutSide").value;
-      const offset = parseFloat(document.getElementById("routeStakeoutOffset").value);
-
-      if (!pointName) {
-        showRouteStakeoutError("点名を入力してください。");
-        return;
-      }
-
-      if (
-        isNaN(x0) || isNaN(y0) ||
-        isNaN(xb) || isNaN(yb) ||
-        isNaN(staNo) || isNaN(staPlus) || isNaN(offset)
-      ) {
-        showRouteStakeoutError("未入力または数値でない項目があります。");
-        return;
-      }
-
-      if (x0 === xb && y0 === yb) {
-        showRouteStakeoutError("器械点と後視点が同じ座標です。");
-        return;
-      }
-
-      if (staNo < 0 || staPlus < 0) {
-        showRouteStakeoutError("測点は 0 以上で入力してください。");
-        return;
-      }
-
-      if (staPlus >= route.pitch) {
-        showRouteStakeoutError("測点の +m は測点ピッチ未満で入力してください。");
-        return;
-      }
-
-      if (offset < 0) {
-        showRouteStakeoutError("幅は 0 以上で入力してください。");
-        return;
-      }
-
-      try {
-        const station = stationToMeters(staNo, staPlus, route.pitch);
-        const signedOffset = signedOffsetFromSide(side, offset);
-        const targetInfo = buildStakeoutTargetPoint(route, station, signedOffset);
-
-        const stakeout = computeStakeoutFromCoordinate({
-          x0, y0, xb, yb,
-          xt: targetInfo.targetPoint.x,
-          yt: targetInfo.targetPoint.y
-        });
-
-        if (stakeout.error) {
-          showRouteStakeoutError(stakeout.error);
-          return;
-        }
-
-        const stationText = formatStation(station, route.pitch);
-        const offsetText = offsetTextFromSigned(signedOffset);
-
-        currentRouteStakeoutRecord = {
-          pointName,
-          x: targetInfo.targetPoint.x,
-          y: targetInfo.targetPoint.y,
-          z: 0,
-          routeName: route.routeName,
-          routeType: route.routeType,
-          station,
-          stationText,
-          signedOffset,
-          offsetText,
-          routeSection: targetInfo.section,
-          backsightAz: stakeout.backsightAz,
-          targetAz: stakeout.targetAz,
-          angle: stakeout.angle,
-          horizontalDist: stakeout.horizontalDist,
-          slopeDist: stakeout.slopeDist,
-          createdAt: new Date().toISOString(),
-          type: "routeStakeout"
-        };
-
-        document.getElementById("routeStakeoutResult").innerHTML =
-          `<div class="big">
-            ${escapeHtml(stationText)}<br>
-            ${escapeHtml(offsetText)}
-          </div>
-          <div class="big">
-            挟角 ${formatDms(stakeout.angle)}<br>
-            距離 ${stakeout.slopeDist.toFixed(3)} m
-          </div>
-          <div class="small">
-            路線名: ${escapeHtml(route.routeName)}<br>
-            線形種別: ${route.routeType === "straight" ? "直線" : "Rを含む線形"}<br>
-            区間: ${escapeHtml(targetInfo.section)}<br>
-            点名: ${escapeHtml(pointName)}<br>
-            目標座標 X: ${targetInfo.targetPoint.x.toFixed(3)}<br>
-            目標座標 Y: ${targetInfo.targetPoint.y.toFixed(3)}<br>
-            後視方位角: ${stakeout.backsightAz.toFixed(4)}°<br>
-            目標方位角: ${stakeout.targetAz.toFixed(4)}°<br>
-            挟角（度表示）: ${stakeout.angle.toFixed(6)}°<br>
-            平面距離: ${stakeout.horizontalDist.toFixed(3)} m
-          </div>`;
-      } catch (error) {
-        showRouteStakeoutError(error.message || "路線測設の計算に失敗しました。");
-      }
-    }
-
-    function addCurrentRouteStakeoutToList() {
-      const addMessage = document.getElementById("routeStakeoutAddMessage");
-      addMessage.textContent = "";
-
-      if (!currentRouteStakeoutRecord) {
-        addMessage.textContent = "先に計算してください。";
-        return;
-      }
-
-      const records = getRecords();
-      records.push(currentRouteStakeoutRecord);
-      saveRecords(records);
-
-      addMessage.textContent = "一覧に追加しました。";
-      incrementPointName("routeStakeoutPointName");
-      loadPointSelectors();
-    }
-
     function renderRecordList() {
       const records = getRecords();
       document.getElementById("listInfo").textContent = `保存件数: ${records.length} 件`;
@@ -2123,14 +1732,7 @@
           <div>
             X: ${Number(record.x).toFixed(3)}<br>
             Y: ${Number(record.y).toFixed(3)}${zText !== "" ? `<br>Z: ${zText}` : ""}
-            ${
-              record.type === "route" || record.type === "routeStakeout"
-                ? `<br>路線名: ${escapeHtml(record.routeName || "")}
-                   <br>線形種別: ${escapeHtml(record.routeType === "straight" ? "直線" : "Rを含む線形")}
-                   <br>測点: ${escapeHtml(record.stationText || "")}
-                   <br>オフセット: ${escapeHtml(record.offsetText || "")}`
-                : ""
-            }
+            ${record.type === "route" ? `<br>路線名: ${escapeHtml(record.routeName || "")}<br>線形種別: ${escapeHtml(record.routeType === "straight" ? "直線" : "Rを含む線形")}<br>測点: ${escapeHtml(record.stationText || "")}<br>オフセット: ${escapeHtml(record.offsetText || "")}` : ""}
           </div>
           <div class="list-buttons">
             <button class="danger" onclick="deleteRecord(${index})">削除</button>
@@ -2392,7 +1994,7 @@
     if (loadedRoute) {
       document.getElementById("routeType").value = loadedRoute.routeType || "curve";
       onRouteTypeChange();
-      updateAllRouteSummaries(loadedRoute);
+      updateRouteSummary(loadedRoute);
     }
   </script>
 </body>

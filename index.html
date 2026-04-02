@@ -222,8 +222,7 @@
       ※ 路線は「直線」「単曲線（BP・IP・EP・R）」に対応です。<br>
       ※ TS座標測設は、器械点・後視点・目標座標から挟角と距離を求めます。<br>
       ※ 路線測量は観測点から測点と右左を求めます。<br>
-      ※ 路線測設は指定した測点と右左から挟角と距離を求めます。<br>
-      ※ 路線の右左は BP → EP を向いた基準で判定します。
+      ※ 路線測設は指定した測点と右左から挟角と距離を求めます。
     </div>
   </section>
 
@@ -482,8 +481,7 @@
     <div class="note" id="routeSetupNote">
       ※ BP測点は No. と +m で入力します。<br>
       ※ 例：No.12+3.456 の場合、No.=12、+m=3.456。<br>
-      ※ 単曲線として計算します。<br>
-      ※ 右左は BP → EP を向いた基準です。
+      ※ 単曲線として計算します。
     </div>
 
     <div id="routeSetupMessage" class="success"></div>
@@ -589,7 +587,7 @@
 
     <div class="note">
       ※ X＝北、Y＝東。挟角は後視方向を基準に右回り。<br>
-      ※ 路線座標の右左は、BP → EP を向いたときの右左です。
+      ※ 路線座標の右左は、BPからEPを見た右左です。
     </div>
 
     <div id="routeResult" class="result">ここに結果が出る</div>
@@ -668,7 +666,7 @@
     <div class="note">
       ※ 指定した測点と右左から目標点を作り、器械点・後視点からの挟角と距離を計算します。<br>
       ※ 距離は平面距離です。<br>
-      ※ 右左は BP → EP を向いた基準です。
+      ※ 右左は BPからEPを見た右左です。
     </div>
 
     <div id="routeStakeoutResult" class="result">ここに結果が出る</div>
@@ -720,8 +718,8 @@
   </section>
 
   <script>
-    const STORAGE_KEY = "ts_coordinate_records_v7";
-    const ROUTE_STORAGE_KEY = "ts_current_route_v4";
+    const STORAGE_KEY = "ts_coordinate_records_v6";
+    const ROUTE_STORAGE_KEY = "ts_current_route_v3";
 
     let currentCalculatedRecord = null;
     let currentRouteCalculatedRecord = null;
@@ -901,12 +899,14 @@
       return { x: v.x / len, y: v.y / len };
     }
 
+    // X=北、Y=東 用の左法線
     function leftNormal(v) {
-      return { x: -v.y, y: v.x };
+      return { x: v.y, y: -v.x };
     }
 
+    // X=北、Y=東 用の右法線
     function rightNormal(v) {
-      return { x: v.y, y: -v.x };
+      return { x: -v.y, y: v.x };
     }
 
     function projectPointToSegment(point, start, end) {
@@ -939,11 +939,12 @@
       return normalizeRad(startRad - endRad);
     }
 
+    // 右をマイナス、左をプラス
     function getSignedOffset(directionUnit, fromProjectedToPoint) {
       const dist = lengthVec(fromProjectedToPoint);
       if (dist === 0) return 0;
       const cross = crossVec(directionUnit, fromProjectedToPoint);
-      return cross >= 0 ? dist : -dist;
+      return cross >= 0 ? -dist : dist;
     }
 
     function offsetTextFromSigned(signedOffset) {
@@ -1144,16 +1145,14 @@
         note.innerHTML =
           `※ BP測点は No. と +m で入力します。<br>
            ※ 例：No.12+3.456 の場合、No.=12、+m=3.456。<br>
-           ※ 直線は BP と EP を結ぶ中心線として計算します。<br>
-           ※ 右左は BP → EP を向いた基準です。`;
+           ※ 直線は BP と EP を結ぶ中心線として計算します。`;
       } else {
         ipSection.classList.remove("hidden");
         radiusSection.classList.remove("hidden");
         note.innerHTML =
           `※ BP測点は No. と +m で入力します。<br>
            ※ 例：No.12+3.456 の場合、No.=12、+m=3.456。<br>
-           ※ 単曲線として計算します。<br>
-           ※ 右左は BP → EP を向いた基準です。`;
+           ※ 単曲線として計算します。`;
       }
     }
 
@@ -1432,7 +1431,6 @@
         bpStation,
         epStation,
         directionUnit,
-        baseDirectionUnit: directionUnit,
         totalLength: distance(bp, ep),
         createdAt: new Date().toISOString()
       };
@@ -1460,7 +1458,6 @@
 
       const inUnit = normalizeVec(inVec);
       const outUnit = normalizeVec(outVec);
-      const baseDirectionUnit = normalizeVec(subVec(ep, bp));
 
       const turnCross = crossVec(inUnit, outUnit);
       if (Math.abs(turnCross) < 1e-12) {
@@ -1487,7 +1484,9 @@
 
       const bc = addVec(ip, scaleVec(inUnit, -tangentLength));
       const ec = addVec(ip, scaleVec(outUnit, tangentLength));
-      const turn = turnCross > 0 ? "left" : "right";
+
+      // X=北、Y=東 の座標系では cross>0 が右折
+      const turn = turnCross > 0 ? "right" : "left";
 
       const center = turn === "left"
         ? addVec(bc, scaleVec(leftNormal(inUnit), routeInput.radius))
@@ -1518,7 +1517,6 @@
         center,
         inUnit,
         outUnit,
-        baseDirectionUnit,
         turn,
         bcStation,
         ecStation,
@@ -1637,8 +1635,7 @@
           線形種別: 直線<br>
           BP測点: ${formatStation(route.bpStation, route.pitch)}<br>
           EP測点: ${formatStation(route.epStation, route.pitch)}<br>
-          延長: ${route.totalLength.toFixed(3)} m<br>
-          右左基準: BP → EP`;
+          延長: ${route.totalLength.toFixed(3)} m`;
       }
 
       return `路線名: ${escapeHtml(route.routeName)}<br>
@@ -1651,14 +1648,13 @@
         曲線長 L: ${route.curveLength.toFixed(3)} m<br>
         BC測点: ${formatStation(route.bcStation, route.pitch)}<br>
         EC測点: ${formatStation(route.ecStation, route.pitch)}<br>
-        EP測点: ${formatStation(route.epStation, route.pitch)}<br>
-        右左基準: BP → EP`;
+        EP測点: ${formatStation(route.epStation, route.pitch)}`;
     }
 
     function projectPointToStraightRoute(route, point) {
       const projection = projectPointToSegment(point, route.bp, route.ep);
       const q = projection.projected;
-      const signedOffset = getSignedOffset(route.baseDirectionUnit, subVec(point, q));
+      const signedOffset = getSignedOffset(route.directionUnit, subVec(point, q));
       const station = route.bpStation + distance(route.bp, q);
 
       return {
@@ -1677,7 +1673,7 @@
       {
         const q = tangent1.projected;
         const w = subVec(point, q);
-        const signedOffset = getSignedOffset(route.baseDirectionUnit, w);
+        const signedOffset = getSignedOffset(route.inUnit, w);
         const station = route.bpStation + distance(route.bp, q);
 
         candidates.push({
@@ -1716,7 +1712,11 @@
           }
 
           if (onArc) {
-            const signedOffset = getSignedOffset(route.baseDirectionUnit, subVec(point, q));
+            const tangentUnit = route.turn === "left"
+              ? leftNormal(radialUnit)
+              : rightNormal(radialUnit);
+
+            const signedOffset = getSignedOffset(tangentUnit, subVec(point, q));
             const station = route.bcStation + route.radius * swept;
 
             candidates.push({
@@ -1734,7 +1734,7 @@
       {
         const q = tangent2.projected;
         const w = subVec(point, q);
-        const signedOffset = getSignedOffset(route.baseDirectionUnit, w);
+        const signedOffset = getSignedOffset(route.outUnit, w);
         const station = route.ecStation + distance(route.ec, q);
 
         candidates.push({
@@ -1823,7 +1823,6 @@
             路線名: ${escapeHtml(route.routeName)}<br>
             線形種別: ${route.routeType === "straight" ? "直線" : "Rを含む線形"}<br>
             区間: ${escapeHtml(currentRouteCalculatedRecord.routeSection)}<br>
-            右左基準: BP → EP<br>
             点名: ${escapeHtml(tsResult.pointName)}<br>
             挟角: ${tsResult.angle.toFixed(6)}°<br>
             鉛直角: ${tsResult.verticalAngle.toFixed(6)}°<br>
@@ -1917,9 +1916,8 @@
       }
 
       const centerline = getRouteCenterlinePoint(route, stationMeters);
-      const baseDirectionUnit = route.baseDirectionUnit || route.directionUnit;
       const signedOffset = side === "right" ? -offsetDistance : offsetDistance;
-      const offsetVec = scaleVec(leftNormal(baseDirectionUnit), signedOffset);
+      const offsetVec = scaleVec(leftNormal(centerline.directionUnit), signedOffset);
       const target = addVec(centerline.point, offsetVec);
 
       return {
@@ -1998,13 +1996,10 @@
             指定測点: ${escapeHtml(target.stationText)}<br>
             離れ: ${escapeHtml(target.offsetText)}<br>
             区間: ${escapeHtml(target.section)}<br>
-            右左基準: BP → EP<br>
             後視方位角: ${result.backsightAz.toFixed(4)}°<br>
             目標方位角: ${result.targetAz.toFixed(4)}°<br>
             挟角（度表示）: ${result.angle.toFixed(6)}°<br>
-            平面距離: ${result.horizontalDist.toFixed(3)} m<br>
-            目標座標 X: ${target.xt.toFixed(3)}<br>
-            目標座標 Y: ${target.yt.toFixed(3)}
+            平面距離: ${result.horizontalDist.toFixed(3)} m
           </div>`;
       } catch (error) {
         showRouteStakeoutError(error.message || "路線測設の計算に失敗しました。");

@@ -226,7 +226,8 @@
     <button class="menu-button" onclick="openCalcScreen()">TS計算座標</button>
     <button class="menu-button" onclick="openStakeoutScreen()">TS座標測設</button>
     <button class="menu-button" onclick="openRouteSetupScreen()">路線測量</button>
-    <button class="menu-button" onclick="showListScreen()">リスト表示</button>
+    <button class="menu-button" onclick="showCoordListScreen()">座標リスト</button>
+    <button class="menu-button" onclick="showRouteListScreen()">路線リスト</button>
     <button class="menu-button" onclick="showScreen('coordIoMenuScreen')">座標データIN・OUT</button>
     <button class="menu-button" onclick="showScreen('routeIoMenuScreen')">路線データIN・OUT</button>
     <div class="note">
@@ -716,12 +717,12 @@
     </div>
   </section>
 
-  <section id="listScreen" class="screen">
+  <section id="coordListScreen" class="screen">
     <div class="top-actions">
       <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
     </div>
 
-    <h2>リスト表示</h2>
+    <h2>座標リスト</h2>
 
     <button onclick="manualAdd()">手打ち追加</button>
 
@@ -729,6 +730,17 @@
     <div id="recordList"></div>
 
     <button class="danger" onclick="clearAllRecords()">全件削除</button>
+  </section>
+
+  <section id="routeListScreen" class="screen">
+    <div class="top-actions">
+      <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
+    </div>
+
+    <h2>路線リスト</h2>
+
+    <div id="routeListInfo" class="note"></div>
+    <div id="routeList"></div>
   </section>
 
   <section id="exportScreen" class="screen">
@@ -838,6 +850,16 @@
       showScreen("routeWorkScreen");
     }
 
+    function showCoordListScreen() {
+      renderRecordList();
+      showScreen("coordListScreen");
+    }
+
+    function showRouteListScreen() {
+      renderRouteList();
+      showScreen("routeListScreen");
+    }
+
     function switchRouteMode(mode) {
       currentRouteMode = mode;
 
@@ -857,11 +879,6 @@
         stakeSection.classList.add("hidden");
         measureSection.classList.remove("hidden");
       }
-    }
-
-    function showListScreen() {
-      renderRecordList();
-      showScreen("listScreen");
     }
 
     function getRecords() {
@@ -1189,7 +1206,7 @@
       routes
         .slice()
         .sort((a, b) => String(a.routeName).localeCompare(String(b.routeName), "ja"))
-        .forEach((route, index) => {
+        .forEach((route) => {
           const opt = document.createElement("option");
           opt.value = route.routeName;
           opt.textContent = `${route.routeName}（${route.routeType === "straight" ? "直線" : "Rを含む線形"}）`;
@@ -2248,6 +2265,33 @@
       }).join("");
     }
 
+    function renderRouteList() {
+      const routes = getRouteLibrary();
+      document.getElementById("routeListInfo").textContent = `保存件数: ${routes.length} 件`;
+
+      const routeList = document.getElementById("routeList");
+      if (routes.length === 0) {
+        routeList.innerHTML = '<div class="note">まだ路線データはありません。</div>';
+        return;
+      }
+
+      const sortedRoutes = routes
+        .slice()
+        .sort((a, b) => String(a.routeName || "").localeCompare(String(b.routeName || ""), "ja"));
+
+      routeList.innerHTML = sortedRoutes.map((route) => {
+        const routeName = route.routeName || "";
+        return `
+        <div class="card">
+          <div><strong>${escapeHtml(routeName)}</strong></div>
+          <div class="list-buttons">
+            <button class="danger" onclick="deleteRouteByName('${escapeHtml(routeName).replaceAll("&#039;", "\\'")}')">削除</button>
+          </div>
+        </div>
+        `;
+      }).join("");
+    }
+
     function deleteRecord(index) {
       const records = getRecords();
       const target = records[index];
@@ -2260,6 +2304,32 @@
       saveRecords(records);
       renderRecordList();
       loadPointSelectors();
+    }
+
+    function deleteRouteByName(routeName) {
+      const routes = getRouteLibrary();
+      const target = routes.find(route => route.routeName === routeName);
+      if (!target) return;
+
+      const ok = confirm(`${routeName} を削除しますか？`);
+      if (!ok) return;
+
+      const filteredRoutes = routes.filter(route => route.routeName !== routeName);
+      saveRouteLibrary(filteredRoutes);
+
+      const loadedRoute = loadCurrentRoute();
+      if (loadedRoute && loadedRoute.routeName === routeName) {
+        saveCurrentRoute(null);
+        updateRouteSummary(null);
+      }
+
+      loadRouteSelectors();
+      renderRouteList();
+
+      const routeSelect = document.getElementById("routeSelect");
+      if (routeSelect) {
+        routeSelect.value = "";
+      }
     }
 
     function manualAdd() {

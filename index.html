@@ -227,14 +227,43 @@
     <button class="menu-button" onclick="openStakeoutScreen()">TS座標測設</button>
     <button class="menu-button" onclick="openRouteSetupScreen()">路線測量</button>
     <button class="menu-button" onclick="showListScreen()">リスト表示</button>
-    <button class="menu-button" onclick="showScreen('exportScreen')">リストエクスポート</button>
-    <button class="menu-button" onclick="showScreen('importScreen')">リストインポート</button>
+    <button class="menu-button" onclick="showScreen('coordIoMenuScreen')">座標データIN・OUT</button>
+    <button class="menu-button" onclick="showScreen('routeIoMenuScreen')">路線データIN・OUT</button>
     <div class="note">
       ※ スマホ内に保存します。<br>
-      ※ CSVインポートは追加です。既存データは消えません。<br>
+      ※ 座標CSVインポートは追加です。既存データは消えません。<br>
+      ※ 路線CSVインポートは同名路線があれば上書きします。<br>
       ※ 路線は「直線」「単曲線（BP・IP・EP・R）」に対応です。<br>
       ※ TS座標測設は、器械点・後視点・目標座標から挟角と距離を求めます。<br>
       ※ 路線条件入力後、「路線測量」「路線測設」を切り替えられます。
+    </div>
+  </section>
+
+  <section id="coordIoMenuScreen" class="screen">
+    <div class="top-actions">
+      <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
+    </div>
+
+    <h2>座標データIN・OUT</h2>
+    <button class="menu-button" onclick="showScreen('exportScreen')">リストエクスポート</button>
+    <button class="menu-button" onclick="showScreen('importScreen')">リストインポート</button>
+
+    <div class="note">
+      ※ 点名・X・Y・Z を含む座標リストをCSVで出し入れします。
+    </div>
+  </section>
+
+  <section id="routeIoMenuScreen" class="screen">
+    <div class="top-actions">
+      <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
+    </div>
+
+    <h2>路線データIN・OUT</h2>
+    <button class="menu-button" onclick="showScreen('routeExportScreen')">路線エクスポート</button>
+    <button class="menu-button" onclick="showScreen('routeImportScreen')">路線インポート</button>
+
+    <div class="note">
+      ※ 路線名・線形種別・BP/IP/EP・R・BP測点・測点ピッチをCSVで出し入れします。
     </div>
   </section>
 
@@ -413,6 +442,11 @@
     </div>
 
     <h2>路線測量</h2>
+
+    <label>保存済み路線を呼び出す</label>
+    <select id="routeSelect" onchange="applySelectedRoute()">
+      <option value="">新規入力する</option>
+    </select>
 
     <label>線形種別</label>
     <select id="routeType" onchange="onRouteTypeChange()">
@@ -699,6 +733,7 @@
 
   <section id="exportScreen" class="screen">
     <div class="top-actions">
+      <button class="secondary" onclick="showScreen('coordIoMenuScreen')">戻る</button>
       <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
     </div>
 
@@ -712,6 +747,7 @@
 
   <section id="importScreen" class="screen">
     <div class="top-actions">
+      <button class="secondary" onclick="showScreen('coordIoMenuScreen')">戻る</button>
       <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
     </div>
 
@@ -727,9 +763,42 @@
     <div id="importMessage" class="success"></div>
   </section>
 
+  <section id="routeExportScreen" class="screen">
+    <div class="top-actions">
+      <button class="secondary" onclick="showScreen('routeIoMenuScreen')">戻る</button>
+      <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
+    </div>
+
+    <h2>路線エクスポート</h2>
+    <div class="note">
+      ※ 保存されている路線データをCSVで出力します。
+    </div>
+    <button onclick="exportRouteCsv()">路線CSVエクスポート</button>
+    <div id="routeExportMessage" class="success"></div>
+  </section>
+
+  <section id="routeImportScreen" class="screen">
+    <div class="top-actions">
+      <button class="secondary" onclick="showScreen('routeIoMenuScreen')">戻る</button>
+      <button class="secondary" onclick="showScreen('homeScreen')">ホームへ戻る</button>
+    </div>
+
+    <h2>路線インポート</h2>
+    <div class="note">
+      ※ 路線CSVを読み込んで、保存済み路線へ追加します。<br>
+      ※ 同名路線がある場合は上書きします。
+    </div>
+
+    <input id="routeCsvFileInput" class="hidden-file-input" type="file" accept=".csv,text/csv" onchange="importRouteCsvFile(event)" />
+    <button onclick="document.getElementById('routeCsvFileInput').click()">路線CSVファイルを選択</button>
+
+    <div id="routeImportMessage" class="success"></div>
+  </section>
+
   <script>
-    const STORAGE_KEY = "ts_coordinate_records_v6";
-    const ROUTE_STORAGE_KEY = "ts_current_route_v3";
+    const STORAGE_KEY = "ts_coordinate_records_v7";
+    const ROUTE_STORAGE_KEY = "ts_current_route_v4";
+    const ROUTE_LIBRARY_KEY = "ts_route_library_v1";
 
     let currentCalculatedRecord = null;
     let currentRouteCalculatedRecord = null;
@@ -756,12 +825,14 @@
     function openRouteSetupScreen() {
       document.getElementById("routeSetupMessage").textContent = "";
       hideRouteSetupError();
+      loadRouteSelectors();
       onRouteTypeChange();
       showScreen("routeSetupScreen");
     }
 
     function openRouteWorkScreen(mode = "measure") {
       loadPointSelectors();
+      loadRouteSelectors();
       updateRouteSummary(loadCurrentRoute());
       switchRouteMode(mode);
       showScreen("routeWorkScreen");
@@ -806,6 +877,36 @@
 
     function saveRecords(records) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    }
+
+    function getRouteLibrary() {
+      const raw = localStorage.getItem(ROUTE_LIBRARY_KEY);
+      if (!raw) return [];
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveRouteLibrary(routes) {
+      localStorage.setItem(ROUTE_LIBRARY_KEY, JSON.stringify(routes));
+    }
+
+    function upsertRouteLibrary(route) {
+      if (!route || !route.routeName) return;
+
+      const routes = getRouteLibrary();
+      const index = routes.findIndex(item => item.routeName === route.routeName);
+
+      if (index >= 0) {
+        routes[index] = route;
+      } else {
+        routes.push(route);
+      }
+
+      saveRouteLibrary(routes);
     }
 
     function saveCurrentRoute(route) {
@@ -1075,6 +1176,61 @@
           }
         });
       });
+    }
+
+    function loadRouteSelectors() {
+      const routes = getRouteLibrary();
+      const select = document.getElementById("routeSelect");
+      if (!select) return;
+
+      const currentValue = select.value;
+      select.innerHTML = '<option value="">新規入力する</option>';
+
+      routes
+        .slice()
+        .sort((a, b) => String(a.routeName).localeCompare(String(b.routeName), "ja"))
+        .forEach((route, index) => {
+          const opt = document.createElement("option");
+          opt.value = route.routeName;
+          opt.textContent = `${route.routeName}（${route.routeType === "straight" ? "直線" : "Rを含む線形"}）`;
+          select.appendChild(opt);
+        });
+
+      if (routes.some(route => route.routeName === currentValue)) {
+        select.value = currentValue;
+      }
+    }
+
+    function applySelectedRoute() {
+      const routeName = document.getElementById("routeSelect").value;
+      if (!routeName) return;
+
+      const routes = getRouteLibrary();
+      const route = routes.find(item => item.routeName === routeName);
+      if (!route) return;
+
+      document.getElementById("routeType").value = route.routeType || "curve";
+      onRouteTypeChange();
+
+      document.getElementById("routeName").value = route.routeName || "";
+      document.getElementById("bpX").value = route.bp?.x ?? "";
+      document.getElementById("bpY").value = route.bp?.y ?? "";
+      document.getElementById("ipX").value = route.ip?.x ?? "";
+      document.getElementById("ipY").value = route.ip?.y ?? "";
+      document.getElementById("epX").value = route.ep?.x ?? "";
+      document.getElementById("epY").value = route.ep?.y ?? "";
+      document.getElementById("bpStaNo").value = route.bpStaNo ?? "";
+      document.getElementById("bpStaPlus").value = route.bpStaPlus ?? "";
+      document.getElementById("routePitch").value = route.pitch ?? "";
+
+      if (route.routeType === "curve") {
+        document.getElementById("routeRadius").value = route.radius ?? "";
+      } else {
+        document.getElementById("routeRadius").value = "";
+      }
+
+      document.getElementById("routeSetupMessage").textContent = "保存済み路線を読み込みました。";
+      hideRouteSetupError();
     }
 
     function applySelectedPoint(type, prefix) {
@@ -1647,6 +1803,9 @@
         }
 
         saveCurrentRoute(route);
+        upsertRouteLibrary(route);
+        loadRouteSelectors();
+        document.getElementById("routeSelect").value = route.routeName;
         updateRouteSummary(route);
         loadPointSelectors();
         document.getElementById("routeSetupMessage").textContent = "路線条件を設定しました。";
@@ -2202,6 +2361,73 @@
       exportMessage.textContent = "CSVをエクスポートしました。";
     }
 
+    function exportRouteCsv() {
+      const routes = getRouteLibrary();
+      const message = document.getElementById("routeExportMessage");
+
+      if (routes.length === 0) {
+        message.textContent = "エクスポートする路線データがありません。";
+        return;
+      }
+
+      const headers = [
+        "路線名",
+        "線形種別",
+        "BP_X", "BP_Y",
+        "IP_X", "IP_Y",
+        "EP_X", "EP_Y",
+        "BP_No", "BP_+m",
+        "R",
+        "測点ピッチ",
+        "登録日時"
+      ];
+
+      const rows = routes.map(route => [
+        route.routeName || "",
+        route.routeType === "straight" ? "直線" : "Rを含む線形",
+        route.bp?.x ?? "",
+        route.bp?.y ?? "",
+        route.ip?.x ?? "",
+        route.ip?.y ?? "",
+        route.ep?.x ?? "",
+        route.ep?.y ?? "",
+        route.bpStaNo ?? "",
+        route.bpStaPlus ?? "",
+        route.routeType === "curve" ? (route.radius ?? "") : "",
+        route.pitch ?? "",
+        route.createdAt || ""
+      ]);
+
+      const csvText = [headers, ...rows]
+        .map(row => row.map(csvEscape).join(","))
+        .join("\r\n");
+
+      const bom = "\uFEFF";
+      const blob = new Blob([bom + csvText], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const now = new Date();
+      const fileName =
+        "ts_routes_" +
+        now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, "0") +
+        String(now.getDate()).padStart(2, "0") +
+        "_" +
+        String(now.getHours()).padStart(2, "0") +
+        String(now.getMinutes()).padStart(2, "0") +
+        ".csv";
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      message.textContent = "路線CSVをエクスポートしました。";
+    }
+
     function csvEscape(value) {
       const text = value == null ? "" : String(value);
       return '"' + text.replaceAll('"', '""') + '"';
@@ -2235,6 +2461,52 @@
           importMessage.textContent = "CSVの読み込みに失敗しました。形式を確認してください。";
         } finally {
           document.getElementById("csvFileInput").value = "";
+        }
+      };
+
+      reader.readAsText(file, "UTF-8");
+    }
+
+    function importRouteCsvFile(event) {
+      const file = event.target.files[0];
+      const importMessage = document.getElementById("routeImportMessage");
+      importMessage.textContent = "";
+
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const text = String(e.target.result || "");
+          const importedRoutes = parseCsvToRoutes(text);
+
+          if (importedRoutes.length === 0) {
+            importMessage.textContent = "取り込める路線データがありませんでした。";
+            return;
+          }
+
+          const existingRoutes = getRouteLibrary();
+          const routeMap = new Map();
+
+          existingRoutes.forEach(route => {
+            if (route.routeName) {
+              routeMap.set(route.routeName, route);
+            }
+          });
+
+          importedRoutes.forEach(route => {
+            routeMap.set(route.routeName, route);
+          });
+
+          const mergedRoutes = Array.from(routeMap.values());
+          saveRouteLibrary(mergedRoutes);
+          loadRouteSelectors();
+
+          importMessage.textContent = importedRoutes.length + " 件の路線を追加／更新しました。";
+        } catch (error) {
+          importMessage.textContent = "路線CSVの読み込みに失敗しました。形式を確認してください。";
+        } finally {
+          document.getElementById("routeCsvFileInput").value = "";
         }
       };
 
@@ -2290,6 +2562,76 @@
       return records;
     }
 
+    function parseCsvToRoutes(csvText) {
+      const rows = parseCsv(csvText);
+      if (rows.length <= 1) return [];
+
+      const routes = [];
+
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length === 0 || row.every(cell => String(cell).trim() === "")) {
+          continue;
+        }
+
+        const routeName = (row[0] || "").trim();
+        const routeTypeText = (row[1] || "").trim();
+        const bpX = parseFloat(row[2]);
+        const bpY = parseFloat(row[3]);
+        const ipX = parseFloat(row[4]);
+        const ipY = parseFloat(row[5]);
+        const epX = parseFloat(row[6]);
+        const epY = parseFloat(row[7]);
+        const bpStaNo = parseFloat(row[8]);
+        const bpStaPlus = parseFloat(row[9]);
+        const radius = parseFloat(row[10]);
+        const pitch = parseFloat(row[11]);
+        const createdAt = row[12] || new Date().toISOString();
+
+        if (!routeName) continue;
+        if (!isFinite(bpX) || !isFinite(bpY) || !isFinite(epX) || !isFinite(epY) || !isFinite(bpStaNo) || !isFinite(bpStaPlus) || !isFinite(pitch)) {
+          continue;
+        }
+
+        try {
+          let route;
+
+          if (routeTypeText === "直線") {
+            route = buildStraightRouteData({
+              routeName,
+              bpX, bpY,
+              epX, epY,
+              bpStaNo,
+              bpStaPlus,
+              pitch
+            });
+          } else {
+            if (!isFinite(ipX) || !isFinite(ipY) || !isFinite(radius)) {
+              continue;
+            }
+
+            route = buildCurveRouteData({
+              routeName,
+              bpX, bpY,
+              ipX, ipY,
+              epX, epY,
+              bpStaNo,
+              bpStaPlus,
+              radius,
+              pitch
+            });
+          }
+
+          route.createdAt = createdAt;
+          routes.push(route);
+        } catch (error) {
+          continue;
+        }
+      }
+
+      return routes;
+    }
+
     function parseCsv(text) {
       const rows = [];
       let row = [];
@@ -2335,6 +2677,7 @@
     }
 
     loadPointSelectors();
+    loadRouteSelectors();
     onRouteTypeChange();
 
     const loadedRoute = loadCurrentRoute();
@@ -2342,6 +2685,13 @@
       document.getElementById("routeType").value = loadedRoute.routeType || "curve";
       onRouteTypeChange();
       updateRouteSummary(loadedRoute);
+      document.getElementById("routeName").value = loadedRoute.routeName || "";
+      if (loadedRoute.routeName) {
+        const routeSelect = document.getElementById("routeSelect");
+        if ([...routeSelect.options].some(opt => opt.value === loadedRoute.routeName)) {
+          routeSelect.value = loadedRoute.routeName;
+        }
+      }
     }
   </script>
 </body>
